@@ -1,6 +1,6 @@
 # go-xxl-job-client
 ## xxl-job go客户端版
-##介绍
+## 介绍
 xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现与使用请参考[https://github.com/xuxueli/xxl-job][1]，原版执行器亦要求Java平台，但公司部分项目是golang开发，所有自己实现了go版本的执行器。
 ##写在前面
 * 源码中admin与执行器的rpc通讯使用的是xuxueli开发的xxl-rpc-core(参考[https://github.com/xuxueli/xxl-rpc][3])，其中com.xxl.rpc.remoting.invoker.reference.XxlRpcReferenceBean这个类的getObject里面有一行代码. 
@@ -23,10 +23,10 @@ xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现
 
 * 我所实现的go客户端执行器依赖gin的web支持（请参考：[https://github.com/gin-gonic/gin][4]）,如果你使用的web框架不是gin，请自行fork源码扩展.
 * 整个设计实现是参考xxl-job-core的源码实现了go版本，核心在于admin与执行器的rpc通讯采用的序列化方式是hessian2，所有借用了apache实现的dubbo-go-hessian2（参考[https://github.com/apache/dubbo-go-hessian2][2]）。
-##部署xxl-job-admin
+## 部署xxl-job-admin
 切记先按上面的方法改动xxl-job-admin源码的pom文件，替换了xxl-rpc-core之后修改配置文件配置好mysql，启动admin。（详细步骤请参考[https://github.com/xuxueli/xxl-job][1]， 此处不要描述admin的部署。）
 
-##部署xxl-job执行器（go版本）
+## 部署xxl-job执行器（go版本）
 ###（1）引入go客户端依赖
 ```
 go get github.com/feixiaobo/go-xxl-job-client
@@ -40,7 +40,7 @@ func XxlJobTest(ctx context.Context) error {
 	return nil
 }
 ```
-###(2) 注册执行，任务，启动项目
+### (2) 注册执行，任务，启动项目
 ```
 	ginServer := server.GinSupport() //构造gin engine
 	xxl.InitExecutor([]string{"http://127.0.0.1:8080/xxl-job-admin"}, "", "test-job-executor", 8081) //注册执行器
