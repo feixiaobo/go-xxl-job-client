@@ -1,8 +1,8 @@
 package server
 
 import (
+	"github.com/feixiaobo/go-xxl-job-client"
 	"github.com/gin-gonic/gin"
-	"histore/order/job/xxl"
 	"net/http"
 )
 

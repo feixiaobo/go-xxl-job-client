@@ -3,8 +3,8 @@ package xxl
 import (
 	"context"
 	"github.com/apache/dubbo-go-hessian2"
+	"github.com/feixiaobo/go-xxl-job-client/logger"
 	"github.com/sirupsen/logrus"
-	"histore/order/job/xxl/logger"
 	"net/http"
 	"reflect"
 	"runtime"
