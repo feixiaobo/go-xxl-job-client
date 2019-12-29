@@ -27,7 +27,7 @@ xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现
 切记先按上面的方法改动xxl-job-admin源码的pom文件，替换了xxl-rpc-core之后修改配置文件配置好mysql，启动admin。（详细步骤请参考[https://github.com/xuxueli/xxl-job][1]， 此处不要描述admin的部署。）
 
 ## 部署xxl-job执行器（go版本）
-###（1）引入go客户端依赖
+### （1）引入go客户端依赖
 ```
 go get github.com/feixiaobo/go-xxl-job-client
 ```
@@ -55,7 +55,7 @@ func XxlJobTest(ctx context.Context) error {
 
 * appName为客户注册执行器时的名字
 * 注册方式选择自动注册
-### (4)在xxl-job-admin后台管理页面添加任务
+###  (4)在xxl-job-admin后台管理页面添加任务
 ![](/Users/feixiaobo/Desktop/1577631684132.jpg)
 * JobHandler为注册任务时的name
 * 执行器选择刚刚添加的执行器
