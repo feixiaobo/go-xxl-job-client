@@ -11,7 +11,7 @@ xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现
 				throw new XxlRpcException(xxlRpcResponse.getErrorMsg());
 		}
 ```
-&emsp;&emsp;&emsp;&emsp;此处返回msg为字符串，不为空则抛异常调用失败，在golang中字符串默认是空字符不是&emsp;&emsp;&emsp;&emsp;空，肯定抛异常，所有需要对此项目的源码进行改动，改动后.  
+&emsp;&emsp;此处返回msg为字符串，不为空则抛异常调用失败，在golang中字符串默认是空字符不是&emsp;&emsp;&emsp;&emsp;空，肯定抛异常，所有需要对此项目的源码进行改动，改动后.  
 
 ```
 		XxlRpcResponse xxlRpcResponse = futureResponse.get(timeout, TimeUnit.MILLISECONDS);
@@ -19,7 +19,7 @@ xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现
 				throw new XxlRpcException(xxlRpcResponse.getErrorMsg());
 		}
 ```
-&emsp;&emsp;&emsp;&emsp;改动源码后发布到你自己的mvn私服中，修改xxl-job-admin中所使用版本为你修改后的版本,接下来就开以开始admin与执行器的开发部署了。（强调一下此步不可省略，我们自己平时写代码时字符串操作最好也不要使用 != null来判空哦）
+&emsp;&emsp;改动源码后发布到你自己的mvn私服中，修改xxl-job-admin中所使用版本为你修改后的版本,接下来就开以开始admin与执行器的开发部署了。（强调一下此步不可省略，我们自己平时写代码时字符串操作最好也不要使用 != null来判空哦）
 
 * 我所实现的go客户端执行器依赖gin的web支持（请参考：[https://github.com/gin-gonic/gin][4]）,如果你使用的web框架不是gin，请自行fork源码扩展.
 * 整个设计实现是参考xxl-job-core的源码实现了go版本，核心在于admin与执行器的rpc通讯采用的序列化方式是hessian2，所有借用了apache实现的dubbo-go-hessian2（参考[https://github.com/apache/dubbo-go-hessian2][2]）。
@@ -40,7 +40,7 @@ func XxlJobTest(ctx context.Context) error {
 	return nil
 }
 ```
-### (2) 注册执行，任务，启动项目
+#### (2) 注册执行，任务，启动项目
 ```
 	ginServer := server.GinSupport() //构造gin engine
 	xxl.InitExecutor([]string{"http://127.0.0.1:8080/xxl-job-admin"}, "", "test-job-executor", 8081) //注册执行器
