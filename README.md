@@ -51,7 +51,7 @@ func XxlJobTest(ctx context.Context) error {
 * 注册任务时的名字是xxl-job-admin后台新增任务时的JobHandler
 
 #### （3）在xxl-job-admin后台管理页面添加执行器
-![](/Users/feixiaobo/Desktop/1577631644200.jpg)
+![](https://github.com/feixiaobo/images/blob/master/1577631644200.jpg)
 
 * appName为客户注册执行器时的名字
 * 注册方式选择自动注册
