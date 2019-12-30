@@ -11,7 +11,7 @@ var XxlAdmin XxlAdminInfo
 
 type JobFunc func()
 
-func (f JobFunc) RunJob(c *gin.Context) () { f() }
+func (f JobFunc) RunJob(c *gin.Context) { f() }
 
 type XxlAdminInfo struct {
 	AccessToken string
@@ -181,8 +181,8 @@ func getIPFromInterface(interfaceName string) string {
 }
 
 func setAddressValid(address string, flag int64) {
-	validMap := XxlAdmin.Addresses[address]
-	if validMap != nil {
+	validMap, ok := XxlAdmin.Addresses[address]
+	if ok {
 		validMap["valid"] = flag
 		validMap["requestTime"] = time.Now().Unix()
 	}
