@@ -169,52 +169,54 @@ func RequestHandler(buf []byte) (res []byte, err error) {
 			returnt.Content = "job parameters is empty"
 		} else {
 			if req.MethodName != "log" {
-				trigger := req.Parameters[0].(*TriggerParam)
-				ctx := context.Background()
-				jobParam := make(map[string]map[string]interface{})
+				go func() {
+					trigger := req.Parameters[0].(*TriggerParam)
+					ctx := context.Background()
+					jobParam := make(map[string]map[string]interface{})
 
-				if trigger.ExecutorParams != "" {
-					params := strings.Split(trigger.ExecutorParams, ",")
-					if len(params) > 0 {
-						inputParam := make(map[string]interface{})
-						for _, param := range params {
-							if param != "" {
-								jobP := strings.Split(param, "=")
-								if len(jobP) > 0 {
-									inputParam[jobP[0]] = jobP[1]
+					if trigger.ExecutorParams != "" {
+						params := strings.Split(trigger.ExecutorParams, ",")
+						if len(params) > 0 {
+							inputParam := make(map[string]interface{})
+							for _, param := range params {
+								if param != "" {
+									jobP := strings.Split(param, "=")
+									if len(jobP) > 0 {
+										inputParam[jobP[0]] = jobP[1]
+									}
 								}
 							}
+							jobParam["inputParam"] = inputParam
 						}
-						jobParam["inputParam"] = inputParam
-					}
-				}
-
-				fun, ok := JobMap[trigger.ExecutorHandler]
-				if ok {
-					funName := getFunctionName(fun)
-					logParam := make(map[string]interface{})
-					logParam["logId"] = trigger.LogId
-					logParam["jobId"] = trigger.JobId
-					logParam["jobName"] = trigger.ExecutorHandler
-					logParam["jobFunc"] = funName
-					jobParam["logParam"] = logParam
-
-					valueCtx := context.WithValue(ctx, "jobParam", jobParam)
-					logger.Info(valueCtx, "job begin start!")
-					err := fun(valueCtx)
-					if err != nil {
-						logger.Info(valueCtx, "job run failed! msg:", err.Error())
-					} else {
-						logger.Info(valueCtx, "job run success!")
 					}
 
-					callback := &HandleCallbackParam{
-						LogId:         trigger.LogId,
-						LogDateTim:    trigger.LogDateTime,
-						ExecuteResult: returnt,
+					fun, ok := JobMap[trigger.ExecutorHandler]
+					if ok {
+						funName := getFunctionName(fun)
+						logParam := make(map[string]interface{})
+						logParam["logId"] = trigger.LogId
+						logParam["jobId"] = trigger.JobId
+						logParam["jobName"] = trigger.ExecutorHandler
+						logParam["jobFunc"] = funName
+						jobParam["logParam"] = logParam
+
+						valueCtx := context.WithValue(ctx, "jobParam", jobParam)
+						logger.Info(valueCtx, "job begin start!")
+						err := fun(valueCtx)
+						if err != nil {
+							logger.Info(valueCtx, "job run failed! msg:", err.Error())
+						} else {
+							logger.Info(valueCtx, "job run success!")
+						}
+
+						callback := &HandleCallbackParam{
+							LogId:         trigger.LogId,
+							LogDateTim:    trigger.LogDateTime,
+							ExecuteResult: returnt,
+						}
+						CallbackAdmin([]*HandleCallbackParam{callback})
 					}
-					go CallbackAdmin([]*HandleCallbackParam{callback})
-				}
+				}()
 			} else {
 				fromLine := req.Parameters[2].(int32)
 				line, content := logger.ReadLog(req.Parameters[0].(int64), req.Parameters[1].(int64), fromLine)
