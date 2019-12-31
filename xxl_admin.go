@@ -180,7 +180,7 @@ func getIPFromInterface(interfaceName string) string {
 	}
 }
 
-func setAddressValid(address string, flag int64) {
+func setAddressValid(address string, flag int) {
 	validMap, ok := XxlAdmin.Addresses[address]
 	if ok {
 		validMap.WriteMap("valid", flag)

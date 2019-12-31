@@ -15,7 +15,7 @@ func NewSafeMap(size int) *SafeMap {
 
 //为提高性能，读不加锁
 func (sm *SafeMap) ReadMap(key interface{}) interface{} {
-	value := sm.Map[key]
+	value, _ := sm.Map[key]
 	return value
 }
 
