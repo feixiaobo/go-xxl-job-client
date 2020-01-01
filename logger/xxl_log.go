@@ -74,6 +74,14 @@ func getLogPath(nowTime time.Time) string {
 	return logPath + nowTime.Format(filePathFormat)
 }
 
+func InitLogPath() error {
+	_, err := os.Stat(getLogPath(time.Now()))
+	if err != nil && os.IsNotExist(err) {
+		err = os.MkdirAll(logPath, os.ModePerm)
+	}
+	return err
+}
+
 func writeLog(logPath, logFile, log string) error {
 	if strings.Trim(logFile, " ") != "" {
 		fileFullPath := logPath + "/" + logFile
@@ -121,7 +129,7 @@ func ReadLog(logDateTim, logId int64, fromLineNum int32) (line int32, content st
 			if totalLines >= fromLineNum {
 				buffer.WriteString(line)
 			}
-			totalLines ++
+			totalLines++
 		}
 	}
 	return totalLines, buffer.String()

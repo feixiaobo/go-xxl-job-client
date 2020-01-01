@@ -96,14 +96,12 @@ func requestAdminApi(op func(string, interface{}) bool, param interface{}) {
 	for k, v := range XxlAdmin.Addresses {
 		if v.ReadMap("valid") == 0 || v.ReadMap("valid") == 1 {
 			if op(k, param) {
-				setAddressValid(k, 1)
 				return
 			} else {
 				setAddressValid(k, -1)
 			}
-		} else if reqTime-v.ReadMap("requestTime").(int64) < 5*1000*1000 {
+		} else if reqTime-v.ReadMap("requestTime").(int64) > 10*1000*1000 {
 			if op(k, param) {
-				setAddressValid(k, 1)
 				return
 			} else {
 				setAddressValid(k, -1)
@@ -113,7 +111,6 @@ func requestAdminApi(op func(string, interface{}) bool, param interface{}) {
 
 	for k, _ := range XxlAdmin.Addresses {
 		if op(k, param) {
-			setAddressValid(k, 1)
 			return
 		} else {
 			setAddressValid(k, -1)

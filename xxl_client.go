@@ -116,6 +116,7 @@ func InitExecutor(addresses []string, accessToken, appName string, port int) {
 	hessian.RegisterPOJO(&RegistryParam{})
 	RegisterExecutor(addresses, accessToken, appName, port, 30*time.Second)
 	logrus.RegisterExitHandler(RemoveRegisterExecutor)
+	go logger.InitLogPath()
 	go AutoRegisterJobGroup()
 }
 
@@ -158,10 +159,10 @@ func RequestHandler(buf []byte) (res []byte, err error) {
 	typeStr := str[0:39]
 	if typeStr == "C0&com.xxl.rpc.remoting.net.params.Beat" {
 		request := r.(*Beat)
-		str = request.RequestId
+		response.RequestId = request.RequestId
 	} else {
 		req := r.(*XxlRpcRequest)
-		str = req.RequestId
+		response.RequestId = req.RequestId
 
 		if len(req.Parameters) == 0 {
 			response.ErrorMsg = "job parameters is empty"
