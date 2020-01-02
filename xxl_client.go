@@ -114,7 +114,7 @@ func InitExecutor(addresses []string, accessToken, appName string, port int) {
 	hessian.RegisterPOJO(&HandleCallbackParam{})
 	hessian.RegisterPOJO(&logger.LogResult{})
 	hessian.RegisterPOJO(&RegistryParam{})
-	RegisterExecutor(addresses, accessToken, appName, port, 30*time.Second)
+	RegisterExecutor(addresses, accessToken, appName, port, 20*time.Second)
 	logrus.RegisterExitHandler(RemoveRegisterExecutor)
 	go logger.InitLogPath()
 	go AutoRegisterJobGroup()
@@ -123,6 +123,11 @@ func InitExecutor(addresses []string, accessToken, appName string, port int) {
 func RegisterJob(jobName string, function JobHandlerFunc) {
 	if JobMap == nil {
 		JobMap = make(map[string]JobHandlerFunc)
+	} else {
+		_, ok := JobMap[jobName]
+		if ok {
+			panic("the job had already register, job name can't be repeated:" + jobName)
+		}
 	}
 	JobMap[jobName] = function
 }
