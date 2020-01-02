@@ -61,6 +61,7 @@ func XxlJobTest(ctx context.Context) error {
 
 添加完成后启动在任务管理菜单中查看任务
 ![](https://github.com/feixiaobo/images/blob/master/1577632360005.jpg)
+
 ###（4）日志输出及参数传递
 * go-xxl-job-client自己实现了日志输出，使用github.com/feixiaobo/go-xxl-job-client/logger包输出日志，因为golang不支持像Java的ThreadLocal一样的线程变量，已无法获取到golang的携程id,所以日志输出依赖的内容已存到context上下文遍历中，故log需要使用context变量。可参考任务配置中的日志输出,  
 ```
