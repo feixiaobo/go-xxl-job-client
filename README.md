@@ -49,7 +49,7 @@ func XxlJobTest(ctx context.Context) error {
 ```
 * 注册执行器时的name是xxl-job-admin后台添加执行器时的name
 * 注册任务时的名字是xxl-job-admin后台新增任务时的JobHandler
-### (3) 在xxl-job-admin后台管理页面添加执行器
+#### (3) 在xxl-job-admin后台管理页面添加执行器
 ![](/Users/feixiaobo/Desktop/1577631644200.jpg)
 * appName为客户注册执行器时的名字
 * 注册方式选择自动注册
@@ -61,7 +61,7 @@ func XxlJobTest(ctx context.Context) error {
 
 添加完成后启动在任务管理菜单中查看任务
 ![](https://github.com/feixiaobo/images/blob/master/1577632360005.jpg)
-### (4) 日志输出及参数传递
+## 日志输出及参数传递
 * go-xxl-job-client自己实现了日志输出，使用github.com/feixiaobo/go-xxl-job-client/logger包输出日志，因为golang不支持像Java的ThreadLocal一样的线程变量，已无法获取到golang的携程id,所以日志输出依赖的内容已存到context上下文遍历中，故log需要使用context变量。可参考任务配置中的日志输出,  
 ```
 	logger.Info(ctx, "golang job run success >>>>>>>>>>>>>>")
