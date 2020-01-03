@@ -2,9 +2,10 @@ package xxl
 
 import (
 	"fmt"
-	"github.com/feixiaobo/go-xxl-job-client/utils"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -14,11 +15,16 @@ type JobFunc func()
 
 func (f JobFunc) RunJob(c *gin.Context) { f() }
 
+type Address struct {
+	Valid       int
+	RequestTime int64
+}
+
 type XxlAdminInfo struct {
 	AccessToken string
 	Port        int
 	Timeout     time.Duration
-	Addresses   map[string]*utils.SafeMap
+	Addresses   sync.Map
 	Registry    *RegistryParam
 }
 
@@ -27,7 +33,7 @@ func RegisterExecutor(addresses []string, accessToken, appName string, port int,
 		panic("xxl admin address is null")
 	}
 	if appName == "" {
-		panic("appName is executor, it can't be null")
+		panic("appName is executor name, it can't be null")
 	}
 
 	hasValid := false
@@ -44,23 +50,21 @@ func RegisterExecutor(addresses []string, accessToken, appName string, port int,
 	}
 	XxlAdmin.Registry = param
 
-	addressMap := make(map[string]*utils.SafeMap)
-	for _, address := range addresses {
-		validMap := utils.NewSafeMap(len(addresses))
+	addressMap := sync.Map{}
+	for _, add := range addresses {
+		address := &Address{RequestTime: time.Now().Unix()}
 		if !hasValid {
-			resMap, err := RegisterJobExecutor(address, XxlAdmin.AccessToken, param, XxlAdmin.Timeout)
+			resMap, err := RegisterJobExecutor(add, XxlAdmin.AccessToken, param, XxlAdmin.Timeout)
 			if err == nil && resMap["code"].(float64) == 200 {
-				validMap.WriteMap("valid", 1)
+				address.Valid = 1
 				hasValid = true
 			} else {
-				validMap.WriteMap("valid", -1)
+				address.Valid = -1
 			}
-			validMap.WriteMap("requestTime", time.Now().Unix())
 		} else {
-			validMap.WriteMap("valid", 0)
-			validMap.WriteMap("requestTime", time.Now().Unix())
+			address.Valid = 0
 		}
-		addressMap[address] = validMap
+		addressMap.Store(add, address)
 	}
 
 	if !hasValid {
@@ -72,17 +76,18 @@ func RegisterExecutor(addresses []string, accessToken, appName string, port int,
 
 func AutoRegisterJobGroup() {
 	XxlAdmin.Registry.RegistryValue = fmt.Sprintf("%s:%d", getLocalIP(), XxlAdmin.Port)
-	t := time.NewTicker(10 * time.Second)
+	t := time.NewTicker(20 * time.Second)
 	for {
 		select {
 		case <-t.C:
 			requestAdminApi(registerExe, XxlAdmin.Registry)
-			t = time.NewTicker(10 * time.Second)
+			log.Print("register job executor beat")
 		}
 	}
 }
 
 func RemoveRegisterExecutor() {
+	log.Print("remove job executor register")
 	requestAdminApi(removerRegister, XxlAdmin.Registry)
 }
 
@@ -93,28 +98,48 @@ func CallbackAdmin(callbackParam []*HandleCallbackParam) {
 //使用有效地址请求，没有有效地址遍历调用
 func requestAdminApi(op func(string, interface{}) bool, param interface{}) {
 	reqTime := time.Now().Unix()
-	for k, v := range XxlAdmin.Addresses {
-		if v.ReadMap("valid") == 0 || v.ReadMap("valid") == 1 {
+	reqSuccess := false
+	XxlAdmin.Addresses.Range(func(key, value interface{}) bool {
+		k := key.(string)
+		v := value.(*Address)
+		if v.Valid == 0 || v.Valid == 1 {
 			if op(k, param) {
-				return
+				reqSuccess = true
+				if v.Valid == 0 {
+					setAddressValid(k, 1)
+				}
+				return false
 			} else {
 				setAddressValid(k, -1)
 			}
-		} else if reqTime-v.ReadMap("requestTime").(int64) > 10*1000*1000 {
+		} else if reqTime-v.RequestTime < 5*1000*1000 {
 			if op(k, param) {
-				return
+				reqSuccess = true
+				if v.Valid == -1 {
+					setAddressValid(k, 1)
+				}
+				return false
 			} else {
 				setAddressValid(k, -1)
 			}
 		}
-	}
+		return false
+	})
 
-	for k, _ := range XxlAdmin.Addresses {
-		if op(k, param) {
-			return
-		} else {
-			setAddressValid(k, -1)
-		}
+	if reqSuccess {
+		XxlAdmin.Addresses.Range(func(key, value interface{}) bool {
+			k := key.(string)
+			v := value.(*Address)
+			if op(k, param) {
+				if v.Valid == 0 || v.Valid == -1 {
+					setAddressValid(k, 1)
+				}
+				return false
+			} else {
+				setAddressValid(k, -1)
+			}
+			return false
+		})
 	}
 }
 
@@ -178,9 +203,10 @@ func getIPFromInterface(interfaceName string) string {
 }
 
 func setAddressValid(address string, flag int) {
-	validMap, ok := XxlAdmin.Addresses[address]
+	add, ok := XxlAdmin.Addresses.Load(address)
 	if ok {
-		validMap.WriteMap("valid", flag)
-		validMap.WriteMap("requestTime", time.Now().Unix())
+		address := add.(*Address)
+		address.Valid = flag
+		address.RequestTime = time.Now().Unix()
 	}
 }

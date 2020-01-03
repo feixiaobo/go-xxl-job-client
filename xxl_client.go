@@ -3,7 +3,10 @@ package xxl
 import (
 	"context"
 	"github.com/apache/dubbo-go-hessian2"
+	"github.com/feixiaobo/go-xxl-job-client/admin"
+	"github.com/feixiaobo/go-xxl-job-client/handler"
 	"github.com/feixiaobo/go-xxl-job-client/logger"
+	"github.com/feixiaobo/go-xxl-job-client/utils"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"reflect"
@@ -12,124 +15,24 @@ import (
 	"time"
 )
 
-type JobHandlerFunc func(ctx context.Context) error
-
-var JobMap map[string]JobHandlerFunc
-
-type XxlRpcRequest struct {
-	RequestId        string
-	CreateMillisTime int64
-	AccessToken      string
-	ClassName        string
-	MethodName       string
-	ParameterTypes   []hessian.Object
-	Parameters       []hessian.Object
-	Version          string
-}
-
-func (XxlRpcRequest) JavaClassName() string {
-	return "com.xxl.rpc.remoting.net.params.XxlRpcRequest"
-}
-
-type TriggerParam struct {
-	JobId                 int32
-	ExecutorHandler       string
-	ExecutorParams        string
-	ExecutorBlockStrategy string
-	ExecutorTimeout       int32
-	LogId                 int64
-	LogDateTime           int64
-	GlueType              string
-	GlueSource            string
-	GlueUpdatetime        int64
-	BroadcastIndex        int32
-	BroadcastTotal        int32
-}
-
-func (TriggerParam) JavaClassName() string {
-	return "com.xxl.job.core.biz.model.TriggerParam"
-}
-
-type Beat struct {
-	RequestId        string
-	CreateMillisTime int64
-	AccessToken      string
-	ClassName        string
-	MethodName       string
-	ParameterTypes   []hessian.Object
-	Parameters       []hessian.Object
-	Version          string
-}
-
-func (Beat) JavaClassName() string {
-	return "com.xxl.rpc.remoting.net.params.Beat"
-}
-
-type XxlRpcResponse struct {
-	RequestId string
-	ErrorMsg  string
-	Result    hessian.Object
-}
-
-func (XxlRpcResponse) JavaClassName() string {
-	return "com.xxl.rpc.remoting.net.params.XxlRpcResponse"
-}
-
-type ReturnT struct {
-	Code    int32       `json:"code"`
-	Msg     string      `json:"msg"`
-	Content interface{} `json:"content"`
-}
-
-func (ReturnT) JavaClassName() string {
-	return "com.xxl.job.core.biz.model.ReturnT"
-}
-
-type HandleCallbackParam struct {
-	LogId         int64   `json:"logId"`
-	LogDateTim    int64   `json:"logDateTim"`
-	ExecuteResult ReturnT `json:"executeResult"`
-}
-
-func (HandleCallbackParam) JavaClassName() string {
-	return "com.xxl.job.core.biz.model.HandleCallbackParam"
-}
-
-type RegistryParam struct {
-	RegistryGroup string `json:"registryGroup"`
-	RegistryKey   string `json:"registryKey"`
-	RegistryValue string `json:"registryValue"`
-}
-
-func (RegistryParam) JavaClassName() string {
-	return "com.xxl.job.core.biz.model.RegistryParam"
-}
-
 func InitExecutor(addresses []string, accessToken, appName string, port int) {
-	hessian.RegisterPOJO(&XxlRpcRequest{})
-	hessian.RegisterPOJO(&TriggerParam{})
-	hessian.RegisterPOJO(&Beat{})
-	hessian.RegisterPOJO(&XxlRpcResponse{})
-	hessian.RegisterPOJO(&ReturnT{})
-	hessian.RegisterPOJO(&HandleCallbackParam{})
+	hessian.RegisterPOJO(&xxl.XxlRpcRequest{})
+	hessian.RegisterPOJO(&xxl.TriggerParam{})
+	hessian.RegisterPOJO(&xxl.Beat{})
+	hessian.RegisterPOJO(&xxl.XxlRpcResponse{})
+	hessian.RegisterPOJO(&xxl.ReturnT{})
+	hessian.RegisterPOJO(&xxl.HandleCallbackParam{})
 	hessian.RegisterPOJO(&logger.LogResult{})
-	hessian.RegisterPOJO(&RegistryParam{})
-	RegisterExecutor(addresses, accessToken, appName, port, 20*time.Second)
-	logrus.RegisterExitHandler(RemoveRegisterExecutor)
+	hessian.RegisterPOJO(&xxl.RegistryParam{})
+	xxl.RegisterExecutor(addresses, accessToken, appName, port, 5*time.Second)
+	logrus.RegisterExitHandler(ExitApplication)
 	go logger.InitLogPath()
-	go AutoRegisterJobGroup()
+	go xxl.AutoRegisterJobGroup()
 }
 
-func RegisterJob(jobName string, function JobHandlerFunc) {
-	if JobMap == nil {
-		JobMap = make(map[string]JobHandlerFunc)
-	} else {
-		_, ok := JobMap[jobName]
-		if ok {
-			panic("the job had already register, job name can't be repeated:" + jobName)
-		}
-	}
-	JobMap[jobName] = function
+func ExitApplication() {
+	xxl.RemoveRegisterExecutor()
+	handler.ClearJob()
 }
 
 func GetParam(ctx context.Context, key string) string {
@@ -154,85 +57,50 @@ func RequestHandler(buf []byte) (res []byte, err error) {
 		return nil, err
 	}
 
-	response := XxlRpcResponse{}
-	returnt := ReturnT{
+	response := xxl.XxlRpcResponse{}
+	returnt := xxl.ReturnT{
 		Code:    http.StatusOK,
 		Content: "success",
 	}
 
-	str := string(buf)
-	typeStr := str[0:39]
-	if typeStr == "C0&com.xxl.rpc.remoting.net.params.Beat" {
-		request := r.(*Beat)
-		response.RequestId = request.RequestId
+	refMap := utils.RefletcStructToMap(r)
+	if refMap == nil {
+		returnt.Content = http.StatusInternalServerError
+		returnt.Content = "reflect request body error"
 	} else {
-		req := r.(*XxlRpcRequest)
-		response.RequestId = req.RequestId
-
-		if len(req.Parameters) == 0 {
-			response.ErrorMsg = "job parameters is empty"
-			returnt.Code = http.StatusInternalServerError
-			returnt.Content = "job parameters is empty"
-		} else {
-			if req.MethodName != "log" {
-				go func() {
-					trigger := req.Parameters[0].(*TriggerParam)
-					ctx := context.Background()
-					jobParam := make(map[string]map[string]interface{})
-
-					if trigger.ExecutorParams != "" {
-						params := strings.Split(trigger.ExecutorParams, ",")
-						if len(params) > 0 {
-							inputParam := make(map[string]interface{})
-							for _, param := range params {
-								if param != "" {
-									jobP := strings.Split(param, "=")
-									if len(jobP) > 0 {
-										inputParam[jobP[0]] = jobP[1]
-									}
-								}
-							}
-							jobParam["inputParam"] = inputParam
-						}
-					}
-
-					fun, ok := JobMap[trigger.ExecutorHandler]
-					if ok {
-						funName := getFunctionName(fun)
-						logParam := make(map[string]interface{})
-						logParam["logId"] = trigger.LogId
-						logParam["jobId"] = trigger.JobId
-						logParam["jobName"] = trigger.ExecutorHandler
-						logParam["jobFunc"] = funName
-						jobParam["logParam"] = logParam
-
-						valueCtx := context.WithValue(ctx, "jobParam", jobParam)
-						logger.Info(valueCtx, "job begin start!")
-						err := fun(valueCtx)
-						if err != nil {
-							logger.Info(valueCtx, "job run failed! msg:", err.Error())
-						} else {
-							logger.Info(valueCtx, "job run success!")
-						}
-
-						callback := &HandleCallbackParam{
-							LogId:         trigger.LogId,
-							LogDateTim:    trigger.LogDateTime,
-							ExecuteResult: returnt,
-						}
-						CallbackAdmin([]*HandleCallbackParam{callback})
-					}
-				}()
+		reqId := refMap["RequestId"].(string)
+		response.RequestId = reqId
+		if "BEAT_PING_PONG" != reqId { //处理非心跳请求
+			if xxl.XxlAdmin.AccessToken != "" && refMap["AccessToken"].(string) != xxl.XxlAdmin.AccessToken {
+				returnt.Content = http.StatusInternalServerError
+				returnt.Content = "access token error"
 			} else {
-				fromLine := req.Parameters[2].(int32)
-				line, content := logger.ReadLog(req.Parameters[0].(int64), req.Parameters[1].(int64), fromLine)
-				log := logger.LogResult{
-					FromLineNum: fromLine,
-					ToLineNum:   line,
-					LogContent:  content,
-					IsEnd:       true,
+				if refMap["MethodName"].(string) != "beat" {
+					req := r.(*xxl.XxlRpcRequest)
+					response.RequestId = req.RequestId
+					if len(req.Parameters) == 0 {
+						response.ErrorMsg = "job parameters is empty"
+						returnt.Code = http.StatusInternalServerError
+						returnt.Content = "job parameters is empty"
+					} else {
+						switch req.MethodName {
+						case "log":
+							fromLine := req.Parameters[2].(int32)
+							line, content := logger.ReadLog(req.Parameters[0].(int64), req.Parameters[1].(int64), fromLine)
+							log := logger.LogResult{
+								FromLineNum: fromLine,
+								ToLineNum:   line,
+								LogContent:  content,
+								IsEnd:       true,
+							}
+							returnt.Content = log
+						case "kill":
+							handler.CancelJob(req.Parameters[0].(int32))
+						default:
+							go runJob(req.Parameters[0].(*xxl.TriggerParam))
+						}
+					}
 				}
-				returnt.Content = log
 			}
 		}
 	}
@@ -250,4 +118,68 @@ func RequestHandler(buf []byte) (res []byte, err error) {
 
 func getFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func runJob(trigger *xxl.TriggerParam) {
+	returnt := xxl.ReturnT{
+		Code:    http.StatusOK,
+		Content: "success",
+	}
+
+	jobParam := make(map[string]map[string]interface{})
+
+	if trigger.ExecutorParams != "" {
+		params := strings.Split(trigger.ExecutorParams, ",")
+		if len(params) > 0 {
+			inputParam := make(map[string]interface{})
+			for _, param := range params {
+				if param != "" {
+					jobP := strings.Split(param, "=")
+					if len(jobP) > 0 {
+						inputParam[jobP[0]] = jobP[1]
+					}
+				}
+			}
+			jobParam["inputParam"] = inputParam
+		}
+	}
+
+	fun, ok := handler.JobMap[trigger.ExecutorHandler]
+	if ok {
+		funName := getFunctionName(fun)
+		logParam := make(map[string]interface{})
+		logParam["logId"] = trigger.LogId
+		logParam["jobId"] = trigger.JobId
+		logParam["jobName"] = trigger.ExecutorHandler
+		logParam["jobFunc"] = funName
+		jobParam["logParam"] = logParam
+
+		valueCtx, canFun := context.WithCancel(context.Background())
+		handler.RegisterCancelFunc(trigger.JobId, canFun)
+		ctx := context.WithValue(valueCtx, "jobParam", jobParam)
+		logger.Info(ctx, "job begin start!")
+		err := fun(ctx)
+		handler.RemoveCancelFun(trigger.JobId)
+		if err != nil {
+			logger.Info(ctx, "job run failed! msg:", err.Error())
+			returnt.Code = http.StatusInternalServerError
+			returnt.Content = err.Error()
+		} else {
+			logger.Info(ctx, "job run success!")
+		}
+	} else {
+		returnt.Code = http.StatusInternalServerError
+		returnt.Content = "job handle not found"
+	}
+
+	callback := &xxl.HandleCallbackParam{
+		LogId:         trigger.LogId,
+		LogDateTim:    trigger.LogDateTime,
+		ExecuteResult: returnt,
+	}
+	xxl.CallbackAdmin([]*xxl.HandleCallbackParam{callback})
+}
+
+func RegisterJob(name string, function handler.JobHandlerFunc) {
+	handler.AddJob(name, function)
 }
