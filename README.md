@@ -11,7 +11,7 @@ xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现
 				throw new XxlRpcException(xxlRpcResponse.getErrorMsg());
 		}
 ```
-&emsp;&emsp;此处返回msg为字符串，不为空则抛异常调用失败，在golang中字符串默认是空字符不是&emsp;&emsp;&emsp;&emsp;空，肯定抛异常，所有需要对此项目的源码进行改动，改动后.  
+&emsp;&emsp;此处返回msg为字符串，不为空则抛异常调用失败，在golang中字符串默认是空字符不是空，肯定抛异常，所有需要对此项目的源码进行改动，改动后.  
 
 ```
 		XxlRpcResponse xxlRpcResponse = futureResponse.get(timeout, TimeUnit.MILLISECONDS);
