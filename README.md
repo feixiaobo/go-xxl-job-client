@@ -72,7 +72,6 @@ func XxlJobTest(ctx context.Context) error {
 	logger.Info(ctx, "the input param:", xxl.GetParam(ctx, "name"))
 ```
 在调度日志中点击执行日志查看任务执行日志，
-![](https://github.com/feixiaobo/images/blob/master/1577632464114.jpg)
 
 [1]: https://github.com/xuxueli/xxl-job	
 [2]: https://github.com/apache/dubbo-go-hessian2
