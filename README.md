@@ -69,7 +69,7 @@ func XxlJobTest(ctx context.Context) error {
 
 * 任务参数传递，可使用xxl.GetParam获取到任务配置或执行时手动添加的参数
 ```
-    val, _ := xxl.GetParam(ctx, "name")
+        val, _ := xxl.GetParam(ctx, "name")
 	logger.Info(ctx, "the input param:", val)
 ```
 在调度日志中点击执行日志查看任务执行日志。
