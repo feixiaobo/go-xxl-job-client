@@ -7,11 +7,9 @@ import (
 	"github.com/feixiaobo/go-xxl-job-client/handler"
 	"github.com/feixiaobo/go-xxl-job-client/logger"
 	"github.com/feixiaobo/go-xxl-job-client/utils"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"reflect"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -25,7 +23,6 @@ func InitExecutor(addresses []string, accessToken, appName string, port int) {
 	hessian.RegisterPOJO(&logger.LogResult{})
 	hessian.RegisterPOJO(&xxl.RegistryParam{})
 	xxl.RegisterExecutor(addresses, accessToken, appName, port, 5*time.Second)
-	logrus.RegisterExitHandler(ExitApplication)
 	go logger.InitLogPath()
 	go xxl.AutoRegisterJobGroup()
 }
@@ -35,18 +32,18 @@ func ExitApplication() {
 	handler.ClearJob()
 }
 
-func GetParam(ctx context.Context, key string) string {
+func GetParam(ctx context.Context, key string) (val string, has bool) {
 	jobMap := ctx.Value("jobParam")
 	if jobMap != nil {
 		inputParam, ok := jobMap.(map[string]map[string]interface{})["inputParam"]
 		if ok {
 			val, vok := inputParam[key]
 			if vok {
-				return val.(string)
+				return val.(string), true
 			}
 		}
 	}
-	return ""
+	return "", false
 }
 
 func RequestHandler(buf []byte) (res []byte, err error) {
@@ -97,7 +94,7 @@ func RequestHandler(buf []byte) (res []byte, err error) {
 						case "kill":
 							handler.CancelJob(req.Parameters[0].(int32))
 						default:
-							go runJob(req.Parameters[0].(*xxl.TriggerParam))
+							go pushJob(req.Parameters[0].(*xxl.TriggerParam))
 						}
 					}
 				}
@@ -120,52 +117,25 @@ func getFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
 
-func runJob(trigger *xxl.TriggerParam) {
+func pushJob(trigger *xxl.TriggerParam) {
 	returnt := xxl.ReturnT{
 		Code:    http.StatusOK,
 		Content: "success",
 	}
 
-	jobParam := make(map[string]map[string]interface{})
-
-	if trigger.ExecutorParams != "" {
-		params := strings.Split(trigger.ExecutorParams, ",")
-		if len(params) > 0 {
-			inputParam := make(map[string]interface{})
-			for _, param := range params {
-				if param != "" {
-					jobP := strings.Split(param, "=")
-					if len(jobP) > 0 {
-						inputParam[jobP[0]] = jobP[1]
-					}
-				}
-			}
-			jobParam["inputParam"] = inputParam
-		}
-	}
-
 	fun, ok := handler.JobMap[trigger.ExecutorHandler]
 	if ok {
 		funName := getFunctionName(fun)
-		logParam := make(map[string]interface{})
-		logParam["logId"] = trigger.LogId
-		logParam["jobId"] = trigger.JobId
-		logParam["jobName"] = trigger.ExecutorHandler
-		logParam["jobFunc"] = funName
-		jobParam["logParam"] = logParam
-
-		valueCtx, canFun := context.WithCancel(context.Background())
-		handler.RegisterCancelFunc(trigger.JobId, canFun)
-		ctx := context.WithValue(valueCtx, "jobParam", jobParam)
-		logger.Info(ctx, "job begin start!")
-		err := fun(ctx)
-		handler.RemoveCancelFun(trigger.JobId)
-		if err != nil {
-			logger.Info(ctx, "job run failed! msg:", err.Error())
+		jobParam := &handler.JobRunParam{
+			LogId:       trigger.LogId,
+			LogDateTime: trigger.LogDateTime,
+			JobName:     trigger.ExecutorHandler,
+			JobFuncName: funName,
+			InputParam:  trigger.ExecutorParams,
+		}
+		if !handler.PushJob(trigger.JobId, jobParam) {
 			returnt.Code = http.StatusInternalServerError
-			returnt.Content = err.Error()
-		} else {
-			logger.Info(ctx, "job run success!")
+			returnt.Content = "push job queue failed"
 		}
 	} else {
 		returnt.Code = http.StatusInternalServerError
