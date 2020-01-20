@@ -11,7 +11,7 @@ xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现
 				throw new XxlRpcException(xxlRpcResponse.getErrorMsg());
 		}
 ```
-&emsp;&emsp;此处返回msg为字符串，不为空则抛异常调用失败，在golang中字符串默认是空字符不是&emsp;&emsp;&emsp;&emsp;空，肯定抛异常，所有需要对此项目的源码进行改动，改动后.  
+&emsp;&emsp;此处返回msg为字符串，不为空则抛异常调用失败，在golang中字符串默认是空字符不是空，肯定抛异常，所有需要对此项目的源码进行改动，改动后.  
 
 ```
 		XxlRpcResponse xxlRpcResponse = futureResponse.get(timeout, TimeUnit.MILLISECONDS);
@@ -62,7 +62,7 @@ func XxlJobTest(ctx context.Context) error {
 添加完成后启动在任务管理菜单中查看任务
 ![](https://github.com/feixiaobo/images/blob/master/1577632360005.jpg)
 ## 日志输出及参数传递
-* go-xxl-job-client自己实现了日志输出，使用github.com/feixiaobo/go-xxl-job-client/logger包输出日志，因为golang不支持像Java的ThreadLocal一样的线程变量，已无法获取到golang的携程id,所以日志输出依赖的内容已存到context上下文遍历中，故log需要使用context变量。可参考任务配置中的日志输出,  
+* go-xxl-job-client自己实现了日志输出，使用github.com/feixiaobo/go-xxl-job-client/logger包输出日志，因为golang不支持像Java的ThreadLocal一样的线程变量，已无法获取到golang的协程id,所以日志输出依赖的内容已存到context上下文遍历中，故log需要使用context变量。可参考任务配置中的日志输出,  
 ```
 	logger.Info(ctx, "golang job run success >>>>>>>>>>>>>>")
 ```
@@ -72,8 +72,7 @@ func XxlJobTest(ctx context.Context) error {
     val, _ := xxl.GetParam(ctx, "name")
 	logger.Info(ctx, "the input param:", val)
 ```
-在调度日志中点击执行日志查看任务执行日志，
-![](https://github.com/feixiaobo/images/blob/master/1577632464114.jpg)
+在调度日志中点击执行日志查看任务执行日志。
 
 [1]: https://github.com/xuxueli/xxl-job	
 [2]: https://github.com/apache/dubbo-go-hessian2
