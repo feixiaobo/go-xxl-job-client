@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/apache/dubbo-go-hessian2"
 	"github.com/dubbogo/getty"
+	"github.com/feixiaobo/go-xxl-job-client/transport"
 	"strings"
 )
 
