@@ -21,7 +21,7 @@ xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现
 ```
 &emsp;&emsp;改动源码后发布到你自己的mvn私服中，修改xxl-job-admin中所使用版本为你修改后的版本,接下来就开以开始admin与执行器的开发部署了。（强调一下此步不可省略，我们自己平时写代码时字符串操作最好也不要使用 != null来判空哦）
 
-* 我所实现的go客户端执行器依赖gin的web支持（请参考：[https://github.com/gin-gonic/gin][4]）,如果你使用的web框架不是gin，请自行fork源码扩展.
+* 我所实现的go客户端执行器rpc通信采用dubbo-go所用的类型Java netty的自研通信框架getty（请参考：[https://github.com/dubbogo/getty][4]）.
 * 整个设计实现是参考xxl-job-core的源码实现了go版本，核心在于admin与执行器的rpc通讯采用的序列化方式是hessian2，所有借用了apache实现的dubbo-go-hessian2（参考[https://github.com/apache/dubbo-go-hessian2][2]）。
 
 ## 部署xxl-job-admin
@@ -42,10 +42,9 @@ func XxlJobTest(ctx context.Context) error {
 ```
 #### (2) 注册执行，任务，启动项目
 ```
-	ginServer := server.GinSupport() //构造gin engine
 	xxl.InitExecutor([]string{"http://127.0.0.1:8080/xxl-job-admin"}, "", "test-job-executor", 8081) //注册执行器
 	xxl.RegisterJob("xxlGoTestJob", task.XxlJobTest) //注册任务
-	ginServer.Run("0.0.0.0:8081") //启动web端口
+	xxl.RunServer() //启动server
 ```
 * 注册执行器时的name是xxl-job-admin后台添加执行器时的name
 * 注册任务时的名字是xxl-job-admin后台新增任务时的JobHandler
@@ -77,4 +76,4 @@ func XxlJobTest(ctx context.Context) error {
 [1]: https://github.com/xuxueli/xxl-job	
 [2]: https://github.com/apache/dubbo-go-hessian2
 [3]: https://github.com/xuxueli/xxl-rpc
-[4]: https://github.com/gin-gonic/gin
+[4]: https://github.com/dubbogo/getty
