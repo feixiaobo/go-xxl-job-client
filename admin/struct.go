@@ -53,7 +53,7 @@ func (Beat) JavaClassName() string {
 
 type XxlRpcResponse struct {
 	RequestId string
-	ErrorMsg  string
+	ErrorMsg  interface{}
 	Result    hessian.Object
 }
 
