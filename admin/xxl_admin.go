@@ -2,7 +2,6 @@ package xxl
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net"
 	"sync"
@@ -10,10 +9,6 @@ import (
 )
 
 var XxlAdmin XxlAdminInfo
-
-type JobFunc func()
-
-func (f JobFunc) RunJob(c *gin.Context) { f() }
 
 type Address struct {
 	Valid       int
@@ -80,8 +75,11 @@ func AutoRegisterJobGroup() {
 	for {
 		select {
 		case <-t.C:
-			requestAdminApi(registerExe, XxlAdmin.Registry)
+			res := requestAdminApi(registerExe, XxlAdmin.Registry)
 			log.Print("register job executor beat")
+			if !res {
+				log.Print("register job executor failed")
+			}
 		}
 	}
 }
@@ -96,15 +94,15 @@ func CallbackAdmin(callbackParam []*HandleCallbackParam) {
 }
 
 //使用有效地址请求，没有有效地址遍历调用
-func requestAdminApi(op func(string, interface{}) bool, param interface{}) {
+func requestAdminApi(op func(string, interface{}) bool, param interface{}) bool {
 	reqTime := time.Now().Unix()
 	reqSuccess := false
 	XxlAdmin.Addresses.Range(func(key, value interface{}) bool {
 		k := key.(string)
 		v := value.(*Address)
-		if v.Valid == 0 || v.Valid == 1 {
-			if op(k, param) {
-				reqSuccess = true
+		if v.Valid == 0 || v.Valid == 1 { //admin地址没有请求过或者有效时直接使用该地址
+			reqSuccess = op(k, param)
+			if reqSuccess {
 				if v.Valid == 0 {
 					setAddressValid(k, 1)
 				}
@@ -112,25 +110,24 @@ func requestAdminApi(op func(string, interface{}) bool, param interface{}) {
 			} else {
 				setAddressValid(k, -1)
 			}
-		} else if reqTime-v.RequestTime < 5*1000*1000 {
-			if op(k, param) {
-				reqSuccess = true
-				if v.Valid == -1 {
-					setAddressValid(k, 1)
-				}
+		} else if reqTime-v.RequestTime > 5 { //地址无效且上次请求时间少于5秒内暂时跳过
+			reqSuccess = op(k, param)
+			if reqSuccess {
+				setAddressValid(k, 1)
 				return false
 			} else {
 				setAddressValid(k, -1)
 			}
 		}
-		return false
+		return true
 	})
 
-	if reqSuccess {
+	if !reqSuccess { //遍历所有有效admin地址仍然没有有效请求时
 		XxlAdmin.Addresses.Range(func(key, value interface{}) bool {
 			k := key.(string)
 			v := value.(*Address)
-			if op(k, param) {
+			reqSuccess = op(k, param)
+			if reqSuccess {
 				if v.Valid == 0 || v.Valid == -1 {
 					setAddressValid(k, 1)
 				}
@@ -138,9 +135,10 @@ func requestAdminApi(op func(string, interface{}) bool, param interface{}) {
 			} else {
 				setAddressValid(k, -1)
 			}
-			return false
+			return true
 		})
 	}
+	return reqSuccess
 }
 
 func registerExe(address string, param interface{}) bool {

@@ -8,25 +8,6 @@ import (
 	"time"
 )
 
-type Job struct {
-	JobGroup              string `json:"jobGroup"`
-	JobCorn               string `json:"jobCorn"`
-	JobDesc               string `json:"jobDesc"`
-	Author                string `json:"author"`
-	ExecutorRouteStrategy string `json:"executorRouteStrategy"`
-	ExecutorBlockStrategy string `json:"executorBlockStrategy"`
-	GlueType              string `json:"glueType"`
-	GlueSource            string `json:"glueSource"`
-	AlarmEmail            string `json:"alarmEmail"`
-}
-
-type JobGroup struct {
-	AppName     string `json:"appName"`
-	Title       string `json:"title"`
-	AddressType int32  `json:"addressType"`
-	AddressList string `json:"addressList"`
-}
-
 func ApiCallback(address, accessToken string, callbackParam []*HandleCallbackParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
 	bytesData, err := json.Marshal(callbackParam)
 	if err != nil {
