@@ -110,7 +110,7 @@ func requestAdminApi(op func(string, interface{}) bool, param interface{}) bool 
 			} else {
 				setAddressValid(k, -1)
 			}
-		} else if reqTime-v.RequestTime > 5 { //地址无效且上次请求时间少于5秒内暂时跳过
+		} else if reqTime-v.RequestTime > 10 { //地址无效且上次请求时间少于10秒内暂时跳过
 			reqSuccess = op(k, param)
 			if reqSuccess {
 				setAddressValid(k, 1)
