@@ -3,24 +3,6 @@
 ## 介绍
 xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现与使用请参考[https://github.com/xuxueli/xxl-job][1]，原版执行器亦要求Java平台，但公司部分项目是golang开发，所有自己实现了go版本的执行器。
 ## 写在前面
-* 源码中admin与执行器的rpc通讯使用的是xuxueli开发的xxl-rpc-core(参考[https://github.com/xuxueli/xxl-rpc][3])，其中com.xxl.rpc.remoting.invoker.reference.XxlRpcReferenceBean这个类的getObject里面有一行代码. 
-
-```
-		XxlRpcResponse xxlRpcResponse = futureResponse.get(timeout, TimeUnit.MILLISECONDS);
-		if (xxlRpcResponse.getErrorMsg() != null) {
-				throw new XxlRpcException(xxlRpcResponse.getErrorMsg());
-		}
-```
-&emsp;&emsp;此处返回msg为字符串，不为空则抛异常调用失败，在golang中字符串默认是空字符不是空，肯定抛异常，所有需要对此项目的源码进行改动，改动后.  
-
-```
-		XxlRpcResponse xxlRpcResponse = futureResponse.get(timeout, TimeUnit.MILLISECONDS);
-		if (StringUtils.hasLength(xxlRpcResponse.getErrorMsg())) {
-				throw new XxlRpcException(xxlRpcResponse.getErrorMsg());
-		}
-```
-&emsp;&emsp;改动源码后发布到你自己的mvn私服中，修改xxl-job-admin中所使用版本为你修改后的版本,接下来就开以开始admin与执行器的开发部署了。（强调一下此步不可省略，我们自己平时写代码时字符串操作最好也不要使用 != null来判空哦）
-
 * 我所实现的go客户端执行器rpc通信采用dubbo-go所用的类型Java netty的自研通信框架getty（请参考：[https://github.com/dubbogo/getty][4]）.
 * 整个设计实现是参考xxl-job-core的源码实现了go版本，核心在于admin与执行器的rpc通讯采用的序列化方式是hessian2，所有借用了apache实现的dubbo-go-hessian2（参考[https://github.com/apache/dubbo-go-hessian2][2]）。
 
