@@ -159,7 +159,7 @@ func RunJob(jobId int32, trigger *JobRunParam) {
 			for _, param := range params {
 				if param != "" {
 					jobP := strings.Split(param, "=")
-					if len(jobP) > 0 {
+					if len(jobP) > 1 {
 						inputParam[jobP[0]] = jobP[1]
 					}
 				}
