@@ -1,7 +1,7 @@
 # go-xxl-job-client
 ## xxl-job go客户端版
 ## 介绍
-xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现与使用请参考[https://github.com/xuxueli/xxl-job][1]，原版执行器亦要求Java平台，但公司部分项目是golang开发，所有自己实现了go版本的执行器。
+xxj-job是一个Java实现的轻量级分布式任务调度平台，具体实现与使用请参考[https://github.com/xuxueli/xxl-job][1]，原版执行器亦要求Java平台，但公司部分项目是golang开发，所以自己实现了go版本的执行器。
 ## 写在前面
 * 我所实现的go客户端执行器rpc通信采用dubbo-go所用的类型Java netty的自研通信框架getty（请参考：[https://github.com/dubbogo/getty][4]）.
 * 整个设计实现是参考xxl-job-core的源码实现了go版本，核心在于admin与执行器的rpc通讯采用的序列化方式是hessian2，所有借用了apache实现的dubbo-go-hessian2（参考[https://github.com/apache/dubbo-go-hessian2][2]）。
