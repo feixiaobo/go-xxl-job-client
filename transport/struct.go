@@ -1,4 +1,4 @@
-package xxl
+package transport
 
 import "github.com/apache/dubbo-go-hessian2"
 

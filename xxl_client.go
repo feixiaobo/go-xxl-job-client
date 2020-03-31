@@ -3,30 +3,57 @@ package xxl
 import (
 	"context"
 	"github.com/apache/dubbo-go-hessian2"
-	"github.com/feixiaobo/go-xxl-job-client/admin"
 	"github.com/feixiaobo/go-xxl-job-client/handler"
 	"github.com/feixiaobo/go-xxl-job-client/logger"
-	"github.com/feixiaobo/go-xxl-job-client/server"
-	"time"
+	"github.com/feixiaobo/go-xxl-job-client/option"
+	"github.com/feixiaobo/go-xxl-job-client/transport"
 )
 
-func InitExecutor(addresses []string, accessToken, appName string, port int) {
-	hessian.RegisterPOJO(&xxl.XxlRpcRequest{})
-	hessian.RegisterPOJO(&xxl.TriggerParam{})
-	hessian.RegisterPOJO(&xxl.Beat{})
-	hessian.RegisterPOJO(&xxl.XxlRpcResponse{})
-	hessian.RegisterPOJO(&xxl.ReturnT{})
-	hessian.RegisterPOJO(&xxl.HandleCallbackParam{})
-	hessian.RegisterPOJO(&logger.LogResult{})
-	hessian.RegisterPOJO(&xxl.RegistryParam{})
-	xxl.RegisterExecutor(addresses, accessToken, appName, port, 5*time.Second)
-	go logger.InitLogPath()
-	go xxl.AutoRegisterJobGroup()
+type XxlClient struct {
+	executor *executor
+
+	gettyClient *GettyClient
+
+	requestHandler *handler.RequestHandler
 }
 
-func ExitApplication() {
-	xxl.RemoveRegisterExecutor()
-	handler.ClearJob()
+type executor struct {
+	appName string
+	port    int
+}
+
+func NewXxlClient(opts ...option.Option) *XxlClient {
+	hessian.RegisterPOJO(&transport.XxlRpcRequest{})
+	hessian.RegisterPOJO(&transport.TriggerParam{})
+	hessian.RegisterPOJO(&transport.Beat{})
+	hessian.RegisterPOJO(&transport.XxlRpcResponse{})
+	hessian.RegisterPOJO(&transport.ReturnT{})
+	hessian.RegisterPOJO(&transport.HandleCallbackParam{})
+	hessian.RegisterPOJO(&logger.LogResult{})
+	hessian.RegisterPOJO(&transport.RegistryParam{})
+
+	clientOps := option.NewClientOptions(opts...)
+	requestHandler := handler.NewRequestHandler(clientOps)
+	gettyClient := &GettyClient{
+		PkgHandler: handler.NewPackageHandler(),
+		EventListener: &handler.MessageHandler{
+			GettyClient: &transport.GettyRPCClient{},
+			MsgHandle:   requestHandler.RequestHandler,
+		},
+	}
+
+	return &XxlClient{
+		requestHandler: requestHandler,
+		executor: &executor{
+			appName: clientOps.AppName,
+			port:    clientOps.Port,
+		},
+		gettyClient: gettyClient,
+	}
+}
+
+func (c *XxlClient) ExitApplication() {
+	c.requestHandler.RemoveRegisterExecutor()
 }
 
 func GetParam(ctx context.Context, key string) (val string, has bool) {
@@ -43,13 +70,30 @@ func GetParam(ctx context.Context, key string) (val string, has bool) {
 	return "", false
 }
 
-func RunServer() {
-	if xxl.XxlAdmin.Port == 0 {
-		panic("executor must be init before run server")
+func GetSharding(ctx context.Context) (shardingIdx, shardingTotal int32) {
+	jobMap := ctx.Value("jobParam")
+	if jobMap != nil {
+		shardingParam, ok := jobMap.(map[string]map[string]interface{})["sharding"]
+		if ok {
+			idx, vok := shardingParam["shardingIdx"]
+			if vok {
+				shardingIdx = idx.(int32)
+			}
+			total, ok := shardingParam["shardingTotal"]
+			if ok {
+				shardingTotal = total.(int32)
+			}
+		}
 	}
-	server.StartServer()
+	return shardingIdx, shardingTotal
 }
 
-func RegisterJob(name string, function handler.JobHandlerFunc) {
-	handler.AddJob(name, function)
+func (c *XxlClient) Run() {
+	c.requestHandler.RegisterExecutor(c.executor.appName, c.executor.port)
+	go logger.InitLogPath()
+	c.gettyClient.Run(c.executor.port, c.requestHandler.JobHandler.BeanJobLength())
+}
+
+func (c *XxlClient) RegisterJob(jobName string, function handler.JobHandlerFunc) {
+	c.requestHandler.JobHandler.RegisterJob(jobName, function)
 }

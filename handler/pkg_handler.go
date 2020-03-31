@@ -9,43 +9,46 @@ import (
 	"strings"
 )
 
+const (
+	maxReadBufLen = 4 * 1024
+	pkgSplitStr   = "POST"
+)
+
 type PkgHandlerRes struct {
 	LastPkg     []byte
 	LastSuccess bool
 	Valid       bool
 }
 
-var (
-	pkgRes = &PkgHandlerRes{
-		LastPkg:     nil,
-		LastSuccess: false,
-		Valid:       false,
-	}
-	maxReadBufLen = 4 * 1024
-)
+type PackageHandler struct {
+	pkgHandlerRes *PkgHandlerRes
+}
 
-type PackageHandler struct{}
+func NewPackageHandler() *PackageHandler {
+	return &PackageHandler{
+		pkgHandlerRes: &PkgHandlerRes{},
+	}
+}
 
 func (h *PackageHandler) Read(ss getty.Session, data []byte) (interface{}, int, error) {
 	var res []interface{}
 	length := len(data)
 
-	if pkgRes.Valid { //粘包
+	if h.pkgHandlerRes.Valid { //粘包
 		var buffer bytes.Buffer
-		buffer.Write(pkgRes.LastPkg)
+		buffer.Write(h.pkgHandlerRes.LastPkg)
 		buffer.Write(data)
 		data = buffer.Bytes()
-		pkgRes.Valid = false
-		pkgRes.LastPkg = nil
+		h.pkgHandlerRes.Valid = false
+		h.pkgHandlerRes.LastPkg = nil
 	}
 
 	str := string(data[:]) //需要分包
-	splitStr := "POST"
-	strs := strings.Split(str, splitStr)
+	strs := strings.Split(str, pkgSplitStr)
 	splitLen := len(strs) - 1
 	if splitLen >= 1 {
 		for index, s := range strs {
-			if index > 1 || (index == 1 && (!pkgRes.Valid || (pkgRes.Valid && !pkgRes.LastSuccess))) {
+			if index > 1 || (index == 1 && (!h.pkgHandlerRes.Valid || (h.pkgHandlerRes.Valid && !h.pkgHandlerRes.LastSuccess))) {
 				pos := strings.Index(s, "\r\n\r\n") //去掉http头部
 				success := false
 				if pos != -1 {
@@ -56,7 +59,7 @@ func (h *PackageHandler) Read(ss getty.Session, data []byte) (interface{}, int, 
 						success = true
 					}
 				}
-				unpacks(s, index, splitLen, length, success)
+				h.unpacks(s, index, splitLen, length, success)
 			}
 		}
 	}
@@ -68,15 +71,15 @@ func (h *PackageHandler) Write(ss getty.Session, p interface{}) ([]byte, error) 
 	return pkg.Decoder(), nil
 }
 
-func unpacks(s string, index, splitLen, length int, success bool) {
+func (h *PackageHandler) unpacks(s string, index, splitLen, length int, success bool) {
 	//位于最后一段字节且总字节长度超过最大长度时，最后一段字节可能是下一个包的前半部分
 	if index == splitLen && length >= maxReadBufLen {
 		var buffer bytes.Buffer
 		buffer.WriteString("POST")
 		buffer.WriteString(s)
-		pkgRes.Valid = true
-		pkgRes.LastSuccess = success
-		pkgRes.LastPkg = buffer.Bytes()
+		h.pkgHandlerRes.Valid = true
+		h.pkgHandlerRes.LastSuccess = success
+		h.pkgHandlerRes.LastPkg = buffer.Bytes()
 	}
 }
 

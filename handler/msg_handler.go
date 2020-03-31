@@ -8,20 +8,19 @@ import (
 	"time"
 )
 
-const WritePkg_Timeout = 5 * time.Second
-
-var gettyClient transport.GettyRPCClient
+const (
+	cronTime         = 20e9
+	writePkg_Timeout = 5 * time.Second
+)
 
 type MessageHandler struct {
-	SessionOnOpen func(session getty.Session)
+	GettyClient *transport.GettyRPCClient
+	MsgHandle   func(pkg interface{}) (res []byte, err error)
 }
 
 func (h *MessageHandler) OnOpen(session getty.Session) error {
 	log.Print("OnOpen session{%s} open", session.Stat())
-	if h.SessionOnOpen != nil {
-		h.SessionOnOpen(session)
-		gettyClient.AddSession(session)
-	}
+	h.GettyClient.AddSession(session)
 	return nil
 }
 
@@ -31,7 +30,7 @@ func (h *MessageHandler) OnError(session getty.Session, err error) {
 
 func (h *MessageHandler) OnClose(session getty.Session) {
 	log.Print("OnClose session{%s} is closing......", session.Stat())
-	gettyClient.RemoveSession(session)
+	h.GettyClient.RemoveSession(session)
 }
 
 func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
@@ -43,7 +42,7 @@ func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 
 	for _, v := range s {
 		if v != nil {
-			res, err := RequestHandler(v)
+			res, err := h.MsgHandle(v)
 			reply(session, res, err)
 		}
 	}
@@ -51,10 +50,10 @@ func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 
 func (h *MessageHandler) OnCron(session getty.Session) {
 	active := session.GetActive()
-	if 20e9 < time.Since(active).Nanoseconds() {
+	if cronTime < time.Since(active).Nanoseconds() {
 		log.Print("OnCorn session{%s} timeout{%s}", session.Stat(), time.Since(active).String())
 		session.Close()
-		gettyClient.RemoveSession(session)
+		h.GettyClient.RemoveSession(session)
 	}
 }
 
@@ -64,7 +63,7 @@ func reply(session getty.Session, resBy []byte, err error) {
 		pkg = transport.NewHttpResponsePkg(http.StatusInternalServerError, resBy)
 	}
 
-	if err := session.WritePkg(pkg, WritePkg_Timeout); err != nil {
+	if err := session.WritePkg(pkg, writePkg_Timeout); err != nil {
 		log.Print("WritePkg error: %#v, %#v", pkg, err)
 	}
 }

@@ -1,14 +1,15 @@
-package xxl
+package admin
 
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/feixiaobo/go-xxl-job-client/transport"
 	"io/ioutil"
 	"net/http"
 	"time"
 )
 
-func ApiCallback(address, accessToken string, callbackParam []*HandleCallbackParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
+func ApiCallback(address, accessToken string, callbackParam []*transport.HandleCallbackParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
 	bytesData, err := json.Marshal(callbackParam)
 	if err != nil {
 		return respMap, err
@@ -37,7 +38,7 @@ func ApiCallback(address, accessToken string, callbackParam []*HandleCallbackPar
 	return respMap, nil
 }
 
-func RegisterJobExecutor(address, accessToken string, param *RegistryParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
+func RegisterJobExecutor(address, accessToken string, param *transport.RegistryParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
 	bytesData, err := json.Marshal(param)
 	if err != nil {
 		return respMap, err
@@ -66,7 +67,7 @@ func RegisterJobExecutor(address, accessToken string, param *RegistryParam, time
 	return respMap, nil
 }
 
-func RemoveJobExecutor(address, accessToken string, param *RegistryParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
+func RemoveJobExecutor(address, accessToken string, param *transport.RegistryParam, timeout time.Duration) (respMap map[string]interface{}, err error) {
 	bytesData, err := json.Marshal(param)
 	if err != nil {
 		return respMap, err

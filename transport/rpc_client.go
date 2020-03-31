@@ -7,7 +7,7 @@ import (
 )
 
 type GettyRPCClient struct {
-	lock     sync.RWMutex
+	sync.RWMutex
 	sessions []getty.Session
 }
 
@@ -16,13 +16,12 @@ func (c *GettyRPCClient) AddSession(session getty.Session) {
 		return
 	}
 
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.Lock()
+	defer c.Unlock()
 	if c.sessions == nil {
 		c.sessions = make([]getty.Session, 0, 16)
 	}
 	c.sessions = append(c.sessions, session)
-	c.lock.Unlock()
 }
 
 func (c *GettyRPCClient) RemoveSession(session getty.Session) {
@@ -30,9 +29,9 @@ func (c *GettyRPCClient) RemoveSession(session getty.Session) {
 		return
 	}
 
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if c.sessions == nil {
+	c.Lock()
+	defer c.Unlock()
+	if c.sessions == nil || len(c.sessions) == 0 {
 		return
 	}
 

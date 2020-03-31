@@ -5,13 +5,13 @@ import (
 	"reflect"
 )
 
-func RefletcStructToMap(ob interface{}) map[string]interface{} {
+func ReflectStructToMap(ob interface{}) map[string]interface{} {
 	res := make(map[string]interface{})
 	object := reflect.ValueOf(ob)
 	ref := object.Elem()
 	typeOfType := ref.Type()
 	if typeOfType.Kind() != reflect.Struct {
-		log.Println("Check type error not Struct")
+		log.Println("Check type error not struct")
 		return nil
 	}
 	for i := 0; i < ref.NumField(); i++ {

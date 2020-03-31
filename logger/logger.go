@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/feixiaobo/go-xxl-job-client/constants"
 	"io"
 	"os"
 	"strings"
@@ -23,10 +24,6 @@ func (LogResult) JavaClassName() string {
 	return "com.xxl.job.core.biz.model.LogResult"
 }
 
-var dateFormat = "2006-01-02 15:04:05"
-var filePathFormat = "2006-01-02"
-var logPath = "/data/applogs/xxl-job/jobhandler/"
-
 func Info(ctx context.Context, args ...interface{}) {
 	jobMap := ctx.Value("jobParam")
 	if jobMap != nil {
@@ -37,7 +34,7 @@ func Info(ctx context.Context, args ...interface{}) {
 				nowTime := time.Now()
 
 				var buffer bytes.Buffer
-				buffer.WriteString(nowTime.Format(dateFormat))
+				buffer.WriteString(nowTime.Format(constants.DateTimeFormat))
 				buffer.WriteString("  [")
 
 				jobName, ok := jobParamMap["jobName"]
@@ -64,20 +61,20 @@ func Info(ctx context.Context, args ...interface{}) {
 				buffer.WriteString("\r\n")
 
 				logId := logid.(int64)
-				writeLog(getLogPath(nowTime), fmt.Sprintf("%d", logId)+".log", buffer.String())
+				writeLog(GetLogPath(nowTime), fmt.Sprintf("%d", logId)+".log", buffer.String())
 			}
 		}
 	}
 }
 
-func getLogPath(nowTime time.Time) string {
-	return logPath + nowTime.Format(filePathFormat)
+func GetLogPath(nowTime time.Time) string {
+	return constants.BasePath + nowTime.Format(constants.DateFormat)
 }
 
 func InitLogPath() error {
-	_, err := os.Stat(getLogPath(time.Now()))
+	_, err := os.Stat(GetLogPath(time.Now()))
 	if err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(logPath, os.ModePerm)
+		err = os.MkdirAll(constants.BasePath, os.ModePerm)
 	}
 	return err
 }
@@ -112,7 +109,7 @@ func writeLog(logPath, logFile, log string) error {
 
 func ReadLog(logDateTim, logId int64, fromLineNum int32) (line int32, content string) {
 	nowtime := time.Unix(logDateTim/1000, 0)
-	fileName := getLogPath(nowtime) + "/" + fmt.Sprintf("%d", logId) + ".log"
+	fileName := GetLogPath(nowtime) + "/" + fmt.Sprintf("%d", logId) + ".log"
 	file, err := os.Open(fileName)
 	totalLines := int32(1)
 	var buffer bytes.Buffer

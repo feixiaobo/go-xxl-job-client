@@ -1,9 +1,8 @@
-package utils
+package queue
 
 import (
 	"errors"
 	"math"
-	"runtime"
 	"sync"
 	"sync/atomic"
 )
@@ -41,27 +40,25 @@ func (q *Queue) Put(item interface{}) error {
 		return errors.New("queue size exceeding maximum capacity")
 	}
 
-	node := &Node{Item: item}
 	q.Lock()
 	defer q.Unlock()
-	atomic.AddInt32(&q.Count, 1)
+	node := &Node{Item: item}
 	q.Last.Next = node
 	q.Last = node
+	atomic.AddInt32(&q.Count, 1)
 	return nil
 }
 
 //保证单协程执行，不加锁
 func (q *Queue) Poll() (has bool, item interface{}) {
-	getPos := atomic.LoadInt32(&q.Count)
-	if getPos <= int32(0) {
-		runtime.Gosched()
+	node := q.Head.Next
+	if node == nil {
 		return false, nil
 	}
-	atomic.AddInt32(&q.Count, -1)
-	node := q.Head.Next
 	res := node.Item
 	node.Item = nil //help GC
 	q.Head = node
+	atomic.AddInt32(&q.Count, -1)
 	return true, res
 }
 
