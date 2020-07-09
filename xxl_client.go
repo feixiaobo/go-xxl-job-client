@@ -3,6 +3,7 @@ package xxl
 import (
 	"context"
 	"github.com/apache/dubbo-go-hessian2"
+	"github.com/dubbogo/getty"
 	"github.com/feixiaobo/go-xxl-job-client/handler"
 	"github.com/feixiaobo/go-xxl-job-client/logger"
 	"github.com/feixiaobo/go-xxl-job-client/option"
@@ -96,4 +97,8 @@ func (c *XxlClient) Run() {
 
 func (c *XxlClient) RegisterJob(jobName string, function handler.JobHandlerFunc) {
 	c.requestHandler.JobHandler.RegisterJob(jobName, function)
+}
+
+func (c *XxlClient) SetLogger(logger getty.Logger) {
+	getty.SetLogger(logger)
 }

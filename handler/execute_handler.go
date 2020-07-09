@@ -149,7 +149,6 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 
 	runParam.CurrentCancelFunc = canFun
 	cmd := exec.CommandContext(cancelCtx, scriptCmd[glueType], "-c", c)
-	logger.Info(ctx, "script command:", c)
 	output, err := cmd.Output()
 	if err != nil {
 		logger.Info(ctx, "run script job error:", err.Error())
@@ -216,14 +215,12 @@ func (b *BeanHandler) Execute(jobId int32, glueType string, runParam *JobRunPara
 
 	runParam.CurrentCancelFunc = canFun
 	ctx := context.WithValue(valueCtx, "jobParam", jobParam)
-	logger.Info(ctx, "job begin start!")
 	err := b.RunFunc(ctx)
 	if err != nil {
 		logger.Info(ctx, "job run failed! msg:", err.Error())
 		return err
 	}
 
-	logger.Info(ctx, "job run success!")
 	return err
 }
 

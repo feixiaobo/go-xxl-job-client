@@ -81,7 +81,6 @@ func (s *XxlAdminServer) AutoRegisterJobGroup(port int) {
 		select {
 		case <-t.C:
 			res := s.requestAdminApi(s.registerExe, s.Registry)
-			log.Print("register job executor beat")
 			if !res {
 				log.Print("register job executor failed")
 			}

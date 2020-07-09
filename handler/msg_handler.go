@@ -19,7 +19,7 @@ type MessageHandler struct {
 }
 
 func (h *MessageHandler) OnOpen(session getty.Session) error {
-	log.Print("OnOpen session{%s} open", session.Stat())
+	log.Print("OnOpen session:", session.Stat())
 	h.GettyClient.AddSession(session)
 	return nil
 }

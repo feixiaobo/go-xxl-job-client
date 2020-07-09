@@ -35,15 +35,12 @@ type JobRunParam struct {
 
 func (jq *JobQueue) StartJob() {
 	if atomic.CompareAndSwapInt32(&jq.Run, 0, 1) {
-		log.Print("begin syn executor job, jobId:", jq.JobId)
 		jq.asyRunJob()
 	}
 }
 
 func (jq *JobQueue) StopJob() bool {
-	res := atomic.CompareAndSwapInt32(&jq.Run, 1, 0)
-	log.Print("all job run finished, stop goroutine, result:", res, "jobId:", jq.JobId)
-	return res
+	return atomic.CompareAndSwapInt32(&jq.Run, 1, 0)
 }
 
 func (jq *JobQueue) asyRunJob() {
