@@ -1,8 +1,8 @@
 package example
 
 import (
-	"github.com/feixiaobo/go-xxl-job-client"
-	"github.com/feixiaobo/go-xxl-job-client/option"
+	"github.com/feixiaobo/go-xxl-job-client/v2"
+	"github.com/feixiaobo/go-xxl-job-client/v2/option"
 	"github.com/sirupsen/logrus"
 	"testing"
 )

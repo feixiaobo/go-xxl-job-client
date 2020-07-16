@@ -3,7 +3,7 @@ package admin
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/feixiaobo/go-xxl-job-client/transport"
+	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"io/ioutil"
 	"net/http"
 	"time"

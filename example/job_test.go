@@ -2,8 +2,8 @@ package example
 
 import (
 	"context"
-	"github.com/feixiaobo/go-xxl-job-client"
-	"github.com/feixiaobo/go-xxl-job-client/logger"
+	"github.com/feixiaobo/go-xxl-job-client/v2"
+	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
 	"log"
 )
 
