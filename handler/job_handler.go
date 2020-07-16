@@ -3,9 +3,9 @@ package handler
 import (
 	"context"
 	"errors"
-	"github.com/feixiaobo/go-xxl-job-client/logger"
-	"github.com/feixiaobo/go-xxl-job-client/queue"
-	"github.com/feixiaobo/go-xxl-job-client/transport"
+	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
+	"github.com/feixiaobo/go-xxl-job-client/v2/queue"
+	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"log"
 	"sync"
 	"sync/atomic"

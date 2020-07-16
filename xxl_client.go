@@ -4,10 +4,10 @@ import (
 	"context"
 	"github.com/apache/dubbo-go-hessian2"
 	"github.com/dubbogo/getty"
-	"github.com/feixiaobo/go-xxl-job-client/handler"
-	"github.com/feixiaobo/go-xxl-job-client/logger"
-	"github.com/feixiaobo/go-xxl-job-client/option"
-	"github.com/feixiaobo/go-xxl-job-client/transport"
+	"github.com/feixiaobo/go-xxl-job-client/v2/handler"
+	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
+	"github.com/feixiaobo/go-xxl-job-client/v2/option"
+	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 )
 
 type XxlClient struct {
