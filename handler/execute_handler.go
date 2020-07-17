@@ -151,12 +151,10 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	cmd := exec.CommandContext(cancelCtx, scriptCmd[glueType], "-c", c)
 	output, err := cmd.Output()
 	if err != nil {
-		logger.Info(ctx, "run script job error:", err.Error())
+		logger.Info(ctx, "run script job res:", string(output), ", error:", err.Error())
 		return err
 	}
-
-	logger.Info(ctx, "run result:", string(output))
-	return nil
+	return err
 }
 
 type BeanHandler struct {
