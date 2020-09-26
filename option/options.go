@@ -25,6 +25,9 @@ type ClientOptions struct {
 	//执行器端口
 	Port int
 
+	//开启http协议
+	EnableHttp bool
+
 	//请求admin超时时间
 	Timeout time.Duration
 
@@ -86,5 +89,11 @@ func WithAdminTimeout(timeout time.Duration) Option {
 func WithBeatTime(beatTime time.Duration) Option {
 	return func(o *ClientOptions) {
 		o.BeatTime = beatTime
+	}
+}
+
+func WithEnableHttp(enable bool) Option {
+	return func(o *ClientOptions) {
+		o.EnableHttp = enable
 	}
 }

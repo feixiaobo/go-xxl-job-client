@@ -65,3 +65,7 @@ func (q *Queue) Poll() (has bool, item interface{}) {
 func (q *Queue) Clear() {
 	q = NewQueue()
 }
+
+func (q *Queue) HasNext() bool {
+	return atomic.LoadInt32(&q.Count) > 0
+}

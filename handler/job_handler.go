@@ -20,6 +20,7 @@ type JobQueue struct {
 	CurrentJob *JobRunParam
 	Run        int32 //0 stop, 1 run
 	Queue      *queue.Queue
+	Callback   func(trigger *JobRunParam, runErr error)
 }
 
 type JobRunParam struct {
@@ -49,7 +50,7 @@ func (jq *JobQueue) asyRunJob() {
 			has, node := jq.Queue.Poll()
 			if has {
 				jq.CurrentJob = node.(*JobRunParam)
-				jq.Execute(jq.JobId, jq.GlueType, jq.CurrentJob)
+				jq.Callback(jq.CurrentJob, jq.Execute(jq.JobId, jq.GlueType, jq.CurrentJob))
 			} else {
 				jq.StopJob()
 				break
@@ -89,6 +90,16 @@ func (j *JobHandler) RegisterJob(jobName string, function JobHandlerFunc) {
 	j.jobMap[jobName] = function
 }
 
+func (j *JobHandler) HasRunning(jobId int32) bool {
+	qu, has := j.QueueMap[jobId]
+	if has {
+		if qu.Run > 0 || qu.Queue.HasNext() {
+			return true
+		}
+	}
+	return false
+}
+
 func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) {
 	qu, has := j.QueueMap[trigger.JobId] //map value是地址，读不加锁
 	if has {
@@ -102,45 +113,46 @@ func (j *JobHandler) PutJobToQueue(trigger *transport.TriggerParam) (err error) 
 			return err
 		}
 		return err
+	}
+
+	j.Lock() //任务map初始化锁
+	defer j.Unlock()
+
+	jobQueue := &JobQueue{
+		GlueType: trigger.GlueType,
+		JobId:    trigger.JobId,
+		Callback: j.CallbackFunc,
+	}
+	if trigger.ExecutorHandler != "" {
+		if j.jobMap == nil && len(j.jobMap) <= 0 {
+			return errors.New("bean job handler not found")
+		}
+		fun, ok := j.jobMap[trigger.ExecutorHandler]
+		if !ok {
+			return errors.New("bean job handler not found")
+		}
+
+		jobQueue.ExecuteHandler = &BeanHandler{
+			RunFunc: fun,
+		}
 	} else {
-		j.Lock() //任务map初始化锁
-		defer j.Unlock()
+		jobQueue.ExecuteHandler = &ScriptHandler{}
+	}
 
-		jobQueue := &JobQueue{
-			GlueType: trigger.GlueType,
-			JobId:    trigger.JobId,
-		}
-		if trigger.ExecutorHandler != "" {
-			if j.jobMap == nil && len(j.jobMap) <= 0 {
-				return errors.New("bean job handler not found")
-			}
-			fun, ok := j.jobMap[trigger.ExecutorHandler]
-			if !ok {
-				return errors.New("bean job handler not found")
-			}
-
-			jobQueue.ExecuteHandler = &BeanHandler{
-				RunFunc: fun,
-			}
-		} else {
-			jobQueue.ExecuteHandler = &ScriptHandler{}
-		}
-
-		runParam, err := jobQueue.ParseJob(trigger)
-		if err != nil {
-			return err
-		}
-		q := queue.NewQueue()
-		err = q.Put(runParam)
-		if err != nil {
-			return err
-		}
-
-		jobQueue.Queue = q
-		j.QueueMap[trigger.JobId] = jobQueue
-		jobQueue.StartJob()
+	runParam, err := jobQueue.ParseJob(trigger)
+	if err != nil {
 		return err
 	}
+	q := queue.NewQueue()
+	err = q.Put(runParam)
+	if err != nil {
+		return err
+	}
+
+	jobQueue.Queue = q
+	j.QueueMap[trigger.JobId] = jobQueue
+	jobQueue.StartJob()
+	return err
 }
 
 func (j *JobHandler) cancelJob(jobId int32) {

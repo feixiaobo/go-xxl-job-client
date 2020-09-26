@@ -4,52 +4,75 @@ import (
 	"context"
 	"github.com/apache/dubbo-go-hessian2"
 	"github.com/dubbogo/getty"
+	"github.com/feixiaobo/go-xxl-job-client/v2/admin"
+	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
+	executor2 "github.com/feixiaobo/go-xxl-job-client/v2/executor"
 	"github.com/feixiaobo/go-xxl-job-client/v2/handler"
+	"github.com/feixiaobo/go-xxl-job-client/v2/handler/http"
+	"github.com/feixiaobo/go-xxl-job-client/v2/handler/rpc"
 	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
 	"github.com/feixiaobo/go-xxl-job-client/v2/option"
 	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 )
 
 type XxlClient struct {
-	executor *executor
-
-	gettyClient *GettyClient
-
-	requestHandler *handler.RequestHandler
-}
-
-type executor struct {
-	appName string
-	port    int
+	executor       *executor2.Executor
+	requestHandler *handler.RequestProcess
 }
 
 func NewXxlClient(opts ...option.Option) *XxlClient {
-	hessian.RegisterPOJO(&transport.XxlRpcRequest{})
-	hessian.RegisterPOJO(&transport.TriggerParam{})
-	hessian.RegisterPOJO(&transport.Beat{})
-	hessian.RegisterPOJO(&transport.XxlRpcResponse{})
-	hessian.RegisterPOJO(&transport.ReturnT{})
-	hessian.RegisterPOJO(&transport.HandleCallbackParam{})
-	hessian.RegisterPOJO(&logger.LogResult{})
-	hessian.RegisterPOJO(&transport.RegistryParam{})
-
 	clientOps := option.NewClientOptions(opts...)
-	requestHandler := handler.NewRequestHandler(clientOps)
-	gettyClient := &GettyClient{
-		PkgHandler: handler.NewPackageHandler(),
-		EventListener: &handler.MessageHandler{
-			GettyClient: &transport.GettyRPCClient{},
-			MsgHandle:   requestHandler.RequestHandler,
-		},
+
+	executor := executor2.NewExecutor(
+		"",
+		clientOps.AppName,
+		clientOps.Port,
+	)
+
+	adminServer := admin.NewAdminServer(
+		clientOps.AdminAddr,
+		clientOps.Timeout,
+		clientOps.BeatTime,
+		executor,
+	)
+
+	var requestHandler *handler.RequestProcess
+	var gettyClient *executor2.GettyClient
+	if clientOps.EnableHttp {
+		adminServer.AccessToken = map[string]string{
+			"XXL-JOB-ACCESS-TOKEN": clientOps.AccessToken,
+		}
+		requestHandler = handler.NewRequestProcess(adminServer, &http.HttpRequestHandler{})
+		executor.Protocol = constants.HttpProtocol
+		gettyClient = &executor2.GettyClient{
+			PkgHandler:    http.NewHttpPackageHandler(),
+			EventListener: http.NewHttpMessageHandler(&transport.GettyRPCClient{}, requestHandler.RequestProcess),
+		}
+	} else {
+		//register java POJO
+		hessian.RegisterPOJO(&transport.XxlRpcRequest{})
+		hessian.RegisterPOJO(&transport.TriggerParam{})
+		hessian.RegisterPOJO(&transport.Beat{})
+		hessian.RegisterPOJO(&transport.XxlRpcResponse{})
+		hessian.RegisterPOJO(&transport.ReturnT{})
+		hessian.RegisterPOJO(&transport.HandleCallbackParam{})
+		hessian.RegisterPOJO(&logger.LogResult{})
+		hessian.RegisterPOJO(&transport.RegistryParam{})
+
+		adminServer.AccessToken = map[string]string{
+			"XXL-RPC-ACCESS-TOKEN": clientOps.AccessToken,
+		}
+		requestHandler = handler.NewRequestProcess(adminServer, &rpc.RpcRequestHandler{})
+		gettyClient = &executor2.GettyClient{
+			PkgHandler:    rpc.NewPackageHandler(),
+			EventListener: rpc.NewRpcMessageHandler(&transport.GettyRPCClient{}, requestHandler.RequestProcess),
+		}
 	}
+	executor.SetClient(gettyClient)
 
 	return &XxlClient{
 		requestHandler: requestHandler,
-		executor: &executor{
-			appName: clientOps.AppName,
-			port:    clientOps.Port,
-		},
-		gettyClient: gettyClient,
+		executor:       executor,
 	}
 }
 
@@ -90,13 +113,13 @@ func GetSharding(ctx context.Context) (shardingIdx, shardingTotal int32) {
 }
 
 func (c *XxlClient) Run() {
-	c.requestHandler.RegisterExecutor(c.executor.appName, c.executor.port)
+	c.requestHandler.RegisterExecutor()
 	go logger.InitLogPath()
-	c.gettyClient.Run(c.executor.port, c.requestHandler.JobHandler.BeanJobLength())
+	c.executor.Run(c.requestHandler.JobHandler.BeanJobLength())
 }
 
 func (c *XxlClient) RegisterJob(jobName string, function handler.JobHandlerFunc) {
-	c.requestHandler.JobHandler.RegisterJob(jobName, function)
+	c.requestHandler.RegisterJob(jobName, function)
 }
 
 func (c *XxlClient) SetLogger(logger getty.Logger) {

@@ -1,4 +1,4 @@
-package handler
+package rpc
 
 import (
 	"bytes"
@@ -48,7 +48,7 @@ func (h *PackageHandler) Read(ss getty.Session, data []byte) (interface{}, int, 
 	splitLen := len(strs) - 1
 	if splitLen >= 1 {
 		for index, s := range strs {
-			if index > 1 || (index == 1 && (!h.pkgHandlerRes.Valid || (h.pkgHandlerRes.Valid && !h.pkgHandlerRes.LastSuccess))) {
+			if index > 1 || (index == 1 && !h.pkgHandlerRes.LastSuccess) {
 				pos := strings.Index(s, "\r\n\r\n") //去掉http头部
 				success := false
 				if pos != -1 {

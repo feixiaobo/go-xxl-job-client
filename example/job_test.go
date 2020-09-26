@@ -9,7 +9,7 @@ import (
 
 func JobTest(ctx context.Context) error {
 	val, _ := xxl.GetParam(ctx, "test")
-	log.Print(">>>>>>>>>>>>>>>>", val)
+	log.Print("job param:", val)
 	logger.Info(ctx, "test job!!!!!")
 	param, _ := xxl.GetParam(ctx, "name") //获取输入参数
 	logger.Info(ctx, "the input param:", param)

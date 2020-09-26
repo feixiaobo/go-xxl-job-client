@@ -1,6 +1,7 @@
-package handler
+package http
 
 import (
+	"context"
 	"github.com/dubbogo/getty"
 	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"log"
@@ -15,7 +16,14 @@ const (
 
 type MessageHandler struct {
 	GettyClient *transport.GettyRPCClient
-	MsgHandle   func(pkg interface{}) (res []byte, err error)
+	MsgHandle   func(ctx context.Context, pkg interface{}) (res []byte, err error)
+}
+
+func NewHttpMessageHandler(transport *transport.GettyRPCClient, msgHandler func(ctx context.Context, pkg interface{}) (res []byte, err error)) getty.EventListener {
+	return &MessageHandler{
+		GettyClient: transport,
+		MsgHandle:   msgHandler,
+	}
 }
 
 func (h *MessageHandler) OnOpen(session getty.Session) error {
@@ -34,7 +42,7 @@ func (h *MessageHandler) OnClose(session getty.Session) {
 }
 
 func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
-	s, ok := pkg.([]interface{})
+	s, ok := pkg.([]*transport.HttpRequestPkg)
 	if !ok {
 		log.Print("illegal package{%#v}", pkg)
 		return
@@ -42,7 +50,7 @@ func (h *MessageHandler) OnMessage(session getty.Session, pkg interface{}) {
 
 	for _, v := range s {
 		if v != nil {
-			res, err := h.MsgHandle(v)
+			res, err := h.MsgHandle(context.Background(), v)
 			reply(session, res, err)
 		}
 	}

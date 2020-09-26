@@ -42,6 +42,7 @@ func XxlJobTest(ctx context.Context) error {
 ```
 	client := xxl.NewXxlClient(
 	        option.WithAppName("go-example"),
+                option.WithEnableHttp(true), //xxl_job v2.2.0版本及以后
 		option.WithClientPort(8083),
 	) //构建客户端
 	client.RegisterJob("testJob", JobTest) //注册任务
@@ -88,6 +89,15 @@ func XxlJobTest(ctx context.Context) error {
 
 在调度日志中点击执行日志查看任务执行日志。
 
+## F&Q
+#### (1) 遇到错误：register executor failed, please check xxl admin address or accessToken
+```
+xxl_job_admin地址不通或者accessToken错误，请检查是否配置了AdminAddress
+```
+#### (2) 执行任务admin端报错：java.net.MalformedURLException: no protocol: 192.168.0.105:8083/run
+```
+xxl_job_admin v2.2.0之后和客户端通信采用http/https通信。需在client端开启http协议，在client option中构造 option.WithEnableHttp(true)， 参考 example下client_test。 旧版本请不要添加这个option
+```
 [1]: https://github.com/xuxueli/xxl-job
 [2]: https://github.com/apache/dubbo-go-hessian2
 [3]: https://github.com/xuxueli/xxl-rpc

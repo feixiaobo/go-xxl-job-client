@@ -9,6 +9,8 @@ import (
 
 func TestXxlClient(t *testing.T) {
 	client := xxl.NewXxlClient(
+		option.WithAccessToken("edqedewfrqdrfrfr"),
+		option.WithEnableHttp(true), //xxl_job v2.2.0版本
 		option.WithClientPort(8083),
 		option.WithAdminAddress("http://localhost:8080/xxl-job-admin"),
 	)

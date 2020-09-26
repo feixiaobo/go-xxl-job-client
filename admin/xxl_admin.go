@@ -1,21 +1,21 @@
 package admin
 
 import (
-	"fmt"
+	"github.com/feixiaobo/go-xxl-job-client/v2/executor"
 	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"log"
-	"net"
 	"net/http"
 	"sync"
 	"time"
 )
 
 type XxlAdminServer struct {
-	AccessToken string
+	AccessToken map[string]string
 	Timeout     time.Duration
 	Addresses   sync.Map
 	Registry    *transport.RegistryParam
 	BeatTime    time.Duration
+	executor    *executor.Executor
 }
 
 const (
@@ -28,7 +28,7 @@ type Address struct {
 	RequestTime int64
 }
 
-func NewAdminServer(addresses []string, accessToken string, timeout, beatTime time.Duration) *XxlAdminServer {
+func NewAdminServer(addresses []string, timeout, beatTime time.Duration, executor *executor.Executor) *XxlAdminServer {
 	if len(addresses) == 0 {
 		panic("xxl admin address is null")
 	}
@@ -38,9 +38,9 @@ func NewAdminServer(addresses []string, accessToken string, timeout, beatTime ti
 	}
 
 	s := &XxlAdminServer{
-		AccessToken: accessToken,
-		Timeout:     timeout,
-		BeatTime:    beatTime,
+		Timeout:  timeout,
+		BeatTime: beatTime,
+		executor: executor,
 	}
 
 	addressMap := sync.Map{}
@@ -56,26 +56,26 @@ func NewAdminServer(addresses []string, accessToken string, timeout, beatTime ti
 	return s
 }
 
-func (s *XxlAdminServer) RegisterExecutor(appName string, port int) {
-	if appName == "" {
+func (s *XxlAdminServer) RegisterExecutor() {
+	if s.executor.AppName == "" {
 		panic("appName is executor name, it can't be null")
 	}
 
 	param := &transport.RegistryParam{
 		RegistryGroup: "EXECUTOR",
-		RegistryKey:   appName,
-		RegistryValue: fmt.Sprintf("%s:%d", getLocalIP(), port),
+		RegistryKey:   s.executor.AppName,
+		RegistryValue: s.executor.GetRegisterAddr(),
 	}
 	s.Registry = param
 
 	hasValid := s.requestAdminApi(s.registerExe, s.Registry)
 	if !hasValid {
-		panic("register executor failed, please check xxl admin address")
+		panic("register executor failed, please check xxl admin address or accessToken")
 	}
 }
 
-func (s *XxlAdminServer) AutoRegisterJobGroup(port int) {
-	s.Registry.RegistryValue = fmt.Sprintf("%s:%d", getLocalIP(), port)
+func (s *XxlAdminServer) AutoRegisterJobGroup() {
+	s.Registry.RegistryValue = s.executor.GetRegisterAddr()
 	t := time.NewTicker(s.BeatTime)
 	for {
 		select {
@@ -175,38 +175,6 @@ func (s *XxlAdminServer) apiCallback(address string, param interface{}) bool {
 	}
 }
 
-func getLocalIP() string {
-	ip := getIPFromInterface("eth0")
-	if ip == "" {
-		ip = getIPFromInterface("en0")
-	}
-	if ip == "" {
-		panic("Unable to determine local IP address (non loopback). Exiting.")
-	}
-	return ip
-}
-
-func getIPFromInterface(interfaceName string) string {
-	itf, _ := net.InterfaceByName(interfaceName)
-	item, _ := itf.Addrs()
-	var ip net.IP
-	for _, addr := range item {
-		switch v := addr.(type) {
-		case *net.IPNet:
-			if !v.IP.IsLoopback() {
-				if v.IP.To4() != nil {
-					ip = v.IP
-				}
-			}
-		}
-	}
-	if ip != nil {
-		return ip.String()
-	} else {
-		return ""
-	}
-}
-
 func (s *XxlAdminServer) setAddressValid(address string, flag int) {
 	add, ok := s.Addresses.Load(address)
 	if ok {
@@ -214,4 +182,13 @@ func (s *XxlAdminServer) setAddressValid(address string, flag int) {
 		address.Valid = flag
 		address.RequestTime = time.Now().Unix()
 	}
+}
+
+func (s *XxlAdminServer) GetToken() string {
+	if len(s.AccessToken) > 0 {
+		for _, v := range s.AccessToken {
+			return v
+		}
+	}
+	return ""
 }

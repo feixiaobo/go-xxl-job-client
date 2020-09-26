@@ -7,4 +7,6 @@ const (
 	GlueSourcePath = BasePath + "gluesource/"
 	GluePrefix     = "GLUE_"
 	GluePrefixLen  = len(GluePrefix)
+
+	HttpProtocol = "http"
 )

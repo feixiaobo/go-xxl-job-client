@@ -1,12 +1,10 @@
-package xxl
+package executor
 
 import (
 	"fmt"
 	"github.com/dubbogo/getty"
 	"github.com/dubbogo/getty/demo/util"
 	"github.com/dubbogo/gost/sync"
-	"github.com/feixiaobo/go-xxl-job-client/v2/handler"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
 	"net"
 	"strconv"
 	"time"
@@ -26,17 +24,15 @@ const (
 )
 
 type GettyClient struct {
-	PkgHandler *handler.PackageHandler
+	PkgHandler getty.ReadWriter
 
-	EventListener *handler.MessageHandler
+	EventListener getty.EventListener
 }
 
-func NewGettyClient() *GettyClient {
+func newGettyClient(pkgHandler getty.ReadWriter, eventListener getty.EventListener) *GettyClient {
 	return &GettyClient{
-		PkgHandler: handler.NewPackageHandler(),
-		EventListener: &handler.MessageHandler{
-			GettyClient: &transport.GettyRPCClient{},
-		},
+		PkgHandler:    pkgHandler,
+		EventListener: eventListener,
 	}
 }
 

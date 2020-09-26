@@ -14,10 +14,10 @@ import (
 )
 
 type LogResult struct {
-	FromLineNum int32
-	ToLineNum   int32
-	LogContent  string
-	IsEnd       bool
+	FromLineNum int32  `json:"fromLineNum"`
+	ToLineNum   int32  `json:"toLineNum"`
+	LogContent  string `json:"logContent"`
+	IsEnd       bool   `json:"isEnd"`
 }
 
 func (LogResult) JavaClassName() string {
