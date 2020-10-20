@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
-	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
-	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
-	"github.com/pkg/errors"
 	"os"
 	"os/exec"
 	"reflect"
@@ -15,6 +11,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/feixiaobo/go-xxl-job-client/v2/constants"
+	"github.com/feixiaobo/go-xxl-job-client/v2/logger"
+	"github.com/feixiaobo/go-xxl-job-client/v2/transport"
+	"github.com/pkg/errors"
 )
 
 var scriptMap = map[string]string{
@@ -123,6 +124,11 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	ctx := context.WithValue(context.Background(), "jobParam", jobParam)
 
 	basePath := logger.GetLogPath(time.Now())
+
+	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+		os.MkdirAll(basePath, os.ModePerm)
+	}
+
 	logPath := basePath + fmt.Sprintf("/%d", runParam.LogId) + ".log"
 
 	var buffer bytes.Buffer
