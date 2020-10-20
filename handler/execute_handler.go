@@ -58,7 +58,7 @@ func (s *ScriptHandler) ParseJob(trigger *transport.TriggerParam) (jobParam *Job
 		return jobParam, errors.New(msg)
 	}
 
-	path := constants.GlueSourcePath + fmt.Sprintf("%d", trigger.JobId) + "_" + fmt.Sprintf("%d", trigger.GlueUpdatetime) + suffix
+	path := fmt.Sprintf("%s%d_%d%s", constants.GlueSourcePath, trigger.JobId, trigger.GlueUpdatetime, suffix)
 	_, err = os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		s.Lock()
