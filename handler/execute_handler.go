@@ -124,11 +124,11 @@ func (s *ScriptHandler) Execute(jobId int32, glueType string, runParam *JobRunPa
 	ctx := context.WithValue(context.Background(), "jobParam", jobParam)
 
 	basePath := logger.GetLogPath(time.Now())
-
 	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+		s.Lock()
 		os.MkdirAll(basePath, os.ModePerm)
+		s.Unlock()
 	}
-
 	logPath := basePath + fmt.Sprintf("/%d", runParam.LogId) + ".log"
 
 	var buffer bytes.Buffer
