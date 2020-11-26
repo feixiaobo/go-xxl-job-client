@@ -7,14 +7,13 @@ import (
 	"github.com/dubbogo/gost/sync"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 )
 
 const (
 	cronPeriod      = 20e9 / 1e6
-	queueLen        = 4
-	queueNum        = 4
-	queuePool       = 16
+	queueLen        = 128
 	maxMsgLen       = 102400
 	wqLen           = 512
 	keepAliveTime   = 3 * time.Minute
@@ -23,13 +22,18 @@ const (
 	writeBufferSize = 65536
 )
 
+var (
+	onceTaskPoll sync.Once
+	taskPool     *gxsync.TaskPool
+)
+
 type GettyClient struct {
 	PkgHandler getty.ReadWriter
 
 	EventListener getty.EventListener
 }
 
-func newGettyClient(pkgHandler getty.ReadWriter, eventListener getty.EventListener) *GettyClient {
+func NewGettyClient(pkgHandler getty.ReadWriter, eventListener getty.EventListener) *GettyClient {
 	return &GettyClient{
 		PkgHandler:    pkgHandler,
 		EventListener: eventListener,
@@ -37,23 +41,27 @@ func newGettyClient(pkgHandler getty.ReadWriter, eventListener getty.EventListen
 }
 
 func (c *GettyClient) Run(port, taskSize int) {
+	onceTaskPoll.Do(func() {
+		taskPool = gxsync.NewTaskPool(
+			gxsync.WithTaskPoolTaskQueueLength(queueLen),
+			gxsync.WithTaskPoolTaskQueueNumber(taskSize),
+			gxsync.WithTaskPoolTaskPoolSize(taskSize/2+1),
+		)
+	})
+
 	portStr := ":" + strconv.Itoa(port)
 	server := getty.NewTCPServer(
 		getty.WithLocalAddress(portStr),
 	)
 
 	server.RunEventLoop(func(session getty.Session) error {
-		taskPool := gxsync.NewTaskPool(
-			gxsync.WithTaskPoolTaskQueueLength(taskSize*queueLen),
-			gxsync.WithTaskPoolTaskQueueNumber(taskSize+queueNum),
-			gxsync.WithTaskPoolTaskPoolSize(taskSize*queuePool),
-		)
-
 		err := c.initialSession(session)
 		if err != nil {
 			return err
 		}
-		session.SetTaskPool(taskPool)
+		if taskPool != nil {
+			session.SetTaskPool(taskPool)
+		}
 		return err
 	})
 	util.WaitCloseSignals(server)

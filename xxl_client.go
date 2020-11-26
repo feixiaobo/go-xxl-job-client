@@ -44,10 +44,8 @@ func NewXxlClient(opts ...option.Option) *XxlClient {
 		}
 		requestHandler = handler.NewRequestProcess(adminServer, &http.HttpRequestHandler{})
 		executor.Protocol = constants.HttpProtocol
-		gettyClient = &executor2.GettyClient{
-			PkgHandler:    http.NewHttpPackageHandler(),
-			EventListener: http.NewHttpMessageHandler(&transport.GettyRPCClient{}, requestHandler.RequestProcess),
-		}
+		gettyClient = executor2.NewGettyClient(http.NewHttpPackageHandler(),
+			http.NewHttpMessageHandler(&transport.GettyRPCClient{}, requestHandler.RequestProcess))
 	} else {
 		//register java POJO
 		hessian.RegisterPOJO(&transport.XxlRpcRequest{})
@@ -114,7 +112,7 @@ func GetSharding(ctx context.Context) (shardingIdx, shardingTotal int32) {
 
 func (c *XxlClient) Run() {
 	c.requestHandler.RegisterExecutor()
-	go logger.InitLogPath()
+	logger.InitLogPath()
 	c.executor.Run(c.requestHandler.JobHandler.BeanJobLength())
 }
 

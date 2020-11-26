@@ -4,13 +4,14 @@ import (
 	"github.com/feixiaobo/go-xxl-job-client/v2"
 	"github.com/feixiaobo/go-xxl-job-client/v2/option"
 	"github.com/sirupsen/logrus"
+	_ "net/http/pprof"
 	"testing"
 )
 
 func TestXxlClient(t *testing.T) {
 	client := xxl.NewXxlClient(
 		option.WithAccessToken("edqedewfrqdrfrfr"),
-		option.WithEnableHttp(true), //xxl_job v2.2.0版本
+		option.WithEnableHttp(true), //xxl_job v2.2之后的版本
 		option.WithClientPort(8083),
 		option.WithAdminAddress("http://localhost:8080/xxl-job-admin"),
 	)
